@@ -7,7 +7,7 @@ Open `index.html` in a modern browser. Keep `styles.css` and `script.js` beside 
 - Left / Right arrows: previous / next slide.
 - Home / End: first / last slide. PageUp / PageDown and Space also work.
 - Keyboard shortcuts leave editable fields alone. Space activates a focused button.
-- Visible Previous / Next controls and Contents navigate the deck; Escape closes Contents.
+- Compact arrow buttons and a slide counter sit beside Contents / Present at the top-right. Escape closes Contents.
 - Present toggles fullscreen when the browser supports it.
 - Algorithm Previous Step / Next Step / Reset controls are separate from slide navigation.
 - Difference has A − B and B − A buttons. Switching direction restarts the trace and updates pseudocode, highlights, and result.
@@ -38,8 +38,8 @@ Set A uses rust, Set B uses muted teal, and U uses olive. The scanning panel and
 
 - `script.js`: `EXAMPLES` controls inputs; `lessons` controls definitions, notation and explanations; `slides` controls ordering. Change example-specific prose too when changing values. SVG layouts are intended for small numeric classroom examples.
 - `script.js`: `definitions`, `makeSteps`, and `codePanel` control pseudocode and generated algorithm traces.
-- `styles.css`: `:root` contains colors. The classroom revision section controls larger text and operand layouts. Main body text is approximately 27–32px at 1600–1920px widths.
-- `index.html`: shared presentation header, footer, and Contents dialog.
+- `styles.css`: `:root` contains colors. The final viewport presentation shell controls responsive typography, spacing, and compact walkthrough zones. The body fills 100dvh (with a 100vh fallback); slides keep content in normal flow without internal scrolling. CSS recalculates on resize and fullscreen changes.
+- `index.html`: shared presentation header with compact navigation and Contents dialog. There is no footer or reserved footer height.
 
 ## Verification
 
@@ -47,4 +47,4 @@ Run `node verify.cjs` if Node is installed. Node is only used for optional devel
 
 Checks cover all operation results and input iterations, reverse difference, matching concept results, paired operand displays, step navigation and reset, direction switching, keyboard navigation and bounds, editable-focus protection, concatenation states, and offline dependencies. The test uses lightweight control doubles and does not verify browser rendering.
 
-Local-file browser preview was blocked by the preview tool's security policy. Visual layout at projector/mobile sizes and actual fullscreen behavior require a check in your own browser.
+Rendered validation: `node verify-layout.cjs` uses Playwright with Microsoft Edge (optional development tools, not runtime dependencies). It checks all 19 slides at 1920 × 1080, 1366 × 768, 1280 × 720, and 1100 × 650; all algorithm steps and reverse difference; motivation states; bounds and overflow; Contents, hashes, reload, arrow navigation, editable focus, and fullscreen entry/exit. Screenshots are saved to the system temporary directory. These desktop sizes were verified in headless Edge; representative screenshots were visually reviewed. Phone-sized portrait layouts are outside these desktop checks.
