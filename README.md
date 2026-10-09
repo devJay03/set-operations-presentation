@@ -18,12 +18,11 @@ Open `index.html` in a modern browser. Keep `styles.css` and `script.js` beside 
 
 1. Cover — Presented by: Jay-ar Mesquiola
 2. Set operations in computing
-3–6. Union: concept, walkthrough, Venn diagram, complexity replay
-7–10. Intersection: concept, walkthrough, Venn diagram, complexity replay
-11–14. Difference: concept, direction-switchable walkthrough, Venn diagrams, A − B complexity replay
-15–18. Complement: concept, walkthrough, Venn diagram, complexity replay
-19. Complexity comparison
-20. Practical applications and conclusion
+3–5. Union: concept, walkthrough, Venn diagram
+6–8. Intersection: concept, walkthrough, Venn diagram
+9–11. Difference: concept, direction-switchable walkthrough, Venn diagram
+12–14. Complement: concept, walkthrough, Venn diagram
+15. Practical applications and conclusion
 
 Union, intersection, and difference use A = {1, 2, 3, 4} and B = {3, 4, 5, 6}. Complement uses U = {1, 2, 3, 4, 5, 6, 7, 8} and its own A = {2, 4, 6, 8}, so Aᶜ = {1, 3, 5, 7}. Edit `EXAMPLES.complementA` for this independent example.
 
@@ -42,19 +41,15 @@ Set A uses rust, Set B uses muted teal, and U uses olive. The scanning panel and
 
 Run `node verify.cjs` if Node is installed. Node is only used for optional development checks; the presentation itself does not require it.
 
-Checks cover all operation results and input iterations, reverse difference, matching concept results, paired operand displays, step navigation and reset, direction switching, keyboard navigation and bounds, editable-focus protection, complexity counters and phases, and offline dependencies. The test uses lightweight control doubles and does not verify browser rendering.
+Checks cover all operation results and input iterations, reverse difference, matching concept results, paired operand displays, step navigation and reset, direction switching, keyboard navigation and bounds, editable-focus protection, presentation content exclusions and slide order, and offline dependencies. The test uses lightweight control doubles and does not verify browser rendering.
 
-Rendered validation: `node verify-layout.cjs` uses Playwright with Microsoft Edge (optional development tools, not runtime dependencies). All 20 slides and all walkthrough states are checked at 1920 × 1080, 1366 × 768, 1280 × 720, 1440 × 900, and 844 × 390. The 390 × 844 portrait case checks the rotation overlay and then rotates to landscape to exercise the deck. Checks cover aspect ratio, canvas bounds, descendant overflow, algorithm controls, Contents, consecutive bookmarks, keyboard navigation, fullscreen entry/exit, swipe isolation, and API rejection. Screenshots are saved to the system temporary directory and representative slides were visually reviewed.
+Rendered validation: `node verify-layout.cjs` uses Playwright with Microsoft Edge (optional development tools, not runtime dependencies). All 15 slides and all walkthrough states are checked at 1920 × 1080, 1366 × 768, 1280 × 720, 1440 × 900, and 844 × 390. The 390 × 844 portrait case checks the rotation overlay and then rotates to landscape to exercise the deck. Checks cover aspect ratio, canvas bounds, descendant overflow, algorithm controls, Contents, consecutive bookmarks, keyboard navigation, fullscreen entry/exit, swipe isolation, and API rejection. Screenshots are saved to the system temporary directory and representative slides were visually reviewed.
 
 Phone tests emulate touch and viewport geometry in Chromium; they do not establish real iOS Safari or Android Chrome API support. Fullscreen and orientation locking remain browser-dependent. A normal website cannot override OS rotation lock. Native mobile device testing remains outstanding.
 
-## Bookmarks and complexity
+## Bookmarks
 
-Numeric hashes match visible slide numbers: #slide-1 through #slide-20. Invalid hashes normalize to the cover. The removed motivation and ADT topics have no menu entries or legacy redirects.
-
-Complexity replays on slides 6, 10, 14, and 18 call the shared `makeSteps` generator with index construction enabled. Normal walkthroughs use an already-hashed lookup. `complexityTraces` derives immutable counter snapshots from those same membership decisions; each replay retains its own position. Previous/reset reconstruct counters, output, index, input states, and pseudocode from the selected snapshot.
-
-Union models 8 insertion attempts (6 new values, 2 duplicates). Intersection and difference each model 4 B-index insertions and 4 A-membership checks (2 kept, 2 excluded). Complement models 4 A-index insertions and 8 U-membership checks (4 kept, 4 excluded). Output insertions are shown separately from index insertions/checks. Input processed includes both indexing and scanning; phase bars distinguish them. Output and temporary index tiles represent stored elements, not bytes or measured allocation. Completion reveals an interpretation alongside the expected time and auxiliary-space bounds. Hash operations are expected O(1), not unconditional worst-case guarantees.
+Numeric hashes match visible slide numbers: #slide-1 through #slide-15. Invalid hashes normalize to the cover. The removed motivation and ADT topics have no menu entries or legacy redirects.
 
 ## Union Venn walkthrough
 

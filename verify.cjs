@@ -6,7 +6,7 @@ const source = fs.readFileSync('script.js','utf8');
 const context = vm.createContext({});
 vm.runInContext(source.slice(0,source.indexOf('const deck ='))+';globalThis.lesson={slides,traces,makeSteps,codePanel,results};',context);
 const {slides,traces,makeSteps,codePanel,results} = context.lesson;
-assert.equal(slides.length,20);
+assert.equal(slides.length,15);
 assert(slides[0].html.includes('Jay-ar Mesquiola'));
 for (const [op,expected] of Object.entries({union:[1,2,3,4,5,6],intersection:[3,4],difference:[1,2],complement:[1,3,5,7]})) {
   const frames=traces[op].steps;
@@ -34,8 +34,8 @@ vm.runInContext(source.slice(source.indexOf("document.addEventListener('keydown'
 const key=(key,editable=false,button=false)=>context.document.keydown({key,target:{isContentEditable:editable,closest(selector){return selector==='button,a'?button:editable;}},preventDefault(){}});
 vm.runInContext('navigate(0)',context);
 assert(elements.previous.disabled);key('ArrowLeft');assert.equal(vm.runInContext('current',context),0);
-key('End');assert.equal(vm.runInContext('current',context),19);assert(elements.next.disabled);
-key('ArrowRight');assert.equal(vm.runInContext('current',context),19);
+key('End');assert.equal(vm.runInContext('current',context),14);assert(elements.next.disabled);
+key('ArrowRight');assert.equal(vm.runInContext('current',context),14);
 key('Home');key('ArrowRight');assert.equal(vm.runInContext('current',context),1);
 key('End',true);assert.equal(vm.runInContext('current',context),1);
 key(' ',false,true);assert.equal(vm.runInContext('current',context),1);
@@ -98,10 +98,10 @@ assert(root.querySelector('.output').innerHTML.includes('>1</span>'));
 root=show('complement',2);
 assert.equal(root.querySelector('.result-change').textContent,'No change');
 assert(root.querySelectorAll('[data-source]')[1].children[0].className.includes('match'));
-const complementOperand=slides[14].html.split('data-source="A"')[1].split('</div>')[0];
+const complementOperand=slides[11].html.split('data-source="A"')[1].split('</div>')[0];
 assert(complementOperand.includes('>2</span>') && !complementOperand.includes('>1</span>'));
-assert(slides[16].html.includes('2, 4, 6, 8'));
-assert(slides[16].html.includes('1, 3, 5, 7'));
+assert(slides[13].html.includes('2, 4, 6, 8'));
+assert(slides[13].html.includes('1, 3, 5, 7'));
 assert(slides[1].html.includes('Set operations are fundamental computational procedures'));
 assert(slides[1].html.includes('A set stores unique elements only — duplicates are ignored.'));
 const overviewCards=slides[1].html.split('<div class="cards overview-cards">')[1].split('<p class="overview-emphasis">')[0];
@@ -109,19 +109,10 @@ assert(!overviewCards.includes('<p'));
 assert.equal((overviewCards.match(/class="symbol"/g)||[]).length,4);
 const assets=['index.html','styles.css','script.js'].map(file=>fs.readFileSync(file,'utf8')).join('\n');
 assert(!/https?:\/\/|@import|fetch\(/.test(assets));
-console.log('PASS: 20 slides, all results and iterations, reverse difference, paired operands, step forward/back/reset/bounds, direction reset, navigation keys/bounds/editable focus, source highlights, processed states, output deltas, exact pseudocode line, complement consistency, symbol-only overview, offline dependencies.');
+console.log('PASS: 15 slides, all results and iterations, reverse difference, paired operands, step forward/back/reset/bounds, direction reset, navigation keys/bounds/editable focus, source highlights, processed states, output deltas, exact pseudocode line, complement consistency, symbol-only overview, offline dependencies.');
 
-vm.runInContext('globalThis.analysis=complexityTraces',context);
-for(const [op,t] of Object.entries(context.analysis)){
- const last=t.steps.at(-1);
- assert.deepEqual(Array.from(last.result),Array.from(results[op]));
- assert.equal(last.insertions,op==='union'?8:4);
- assert.equal(last.checks,op==='union'?0:op==='complement'?8:4);
- assert.equal(last.accepted,op==='union'?6:op==='complement'?4:2);
- assert.equal(last.skipped,op==='complement'?4:2);
- assert.equal(last.processed,op==='complement'?12:8);
- for(const f of t.steps){assert.equal(f.result.length,f.accepted);assert.equal(f.processed,f.insertions+f.checks);}
-}
-assert.deepEqual(Array.from(slides.filter(s=>s.title.includes('Complexity Analysis')),s=>s.bookmark),[6,10,14,18]);
-assert(!slides.some(s=>/Why Sets Matter|Set ADT/.test(s.title)));
-console.log('PASS: complexity accounting, shared results, phase counts, and slide order.');
+assert(!slides.some(s=>/Why Sets Matter|Set ADT|Abstract Data Type/.test(s.title)));
+assert(!/complexity|O\s*\(|worst.case|average.case|expected.time|auxiliary space|memory usage/i.test(slides.map(s=>s.title+s.html).join(' ')));
+assert.deepEqual(Array.from(slides,s=>s.bookmark),Array.from({length:15},(_,i)=>i+1));
+assert.deepEqual(Array.from(slides.slice(2,14),s=>s.title),['Union of Sets','Union Algorithm Walkthrough','Union Venn Diagram','Intersection of Sets','Intersection Algorithm Walkthrough','Intersection Venn Diagram','Difference of Sets','Difference Algorithm Walkthrough','Difference Venn Diagram','Complement of a Set','Complement Algorithm Walkthrough','Complement Venn Diagram']);
+console.log('PASS: revised order, consecutive bookmarks, and presentation content exclusions.');

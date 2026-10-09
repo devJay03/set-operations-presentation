@@ -46,10 +46,10 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
    }
    await page.waitForFunction(()=>document.getElementById('mobile-prompt').hidden);
   }
-  assert.equal(await page.locator('.slide').count(),20);
-  assert.equal(await page.locator('#index-links button').count(),20);
+  assert.equal(await page.locator('.slide').count(),15);
+  assert.equal(await page.locator('#index-links button').count(),15);
   assert.equal(await page.getByText('Sets as an Abstract Data Type',{exact:true}).count(),0);
-  for(let i=0;i<20;i++) {
+  for(let i=0;i<15;i++) {
    await page.evaluate(i=>navigate(i),i);await check(page,`${width}x${height} slide ${i+1}`);
    const root=page.locator('.slide:not([hidden]) [data-operation]');
    if(await root.count()) {
@@ -67,29 +67,7 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
      assert.match(await root.locator('.step-count').innerText(),/^Step 0/);
     }
    }
-   const replay=page.locator('.slide:not([hidden]) [data-complexity]');
-   if(await replay.count()) {
-    const op=await replay.getAttribute('data-complexity');
-    let step=0;
-    do {
-     await check(page,`${width} complexity ${op} step ${step}`);
-     const snapshot=await page.evaluate(op=>{const t=complexityTraces[op];return t.steps[t.position]},op);
-     assert.equal(await replay.locator('.output .cell').count(),snapshot.result.length);
-     assert.equal(await replay.locator('.line.current').count(),1);
-     assert.equal(await replay.locator('.line.current').getAttribute('data-line'),String(snapshot.line));
-     assert.deepEqual(await replay.locator('.analysis-counters b').allTextContents(),[snapshot.processed,snapshot.insertions,...(op==='union'?[]:[snapshot.checks]),snapshot.accepted,snapshot.skipped].map(String));
-     if(await replay.locator('[data-analysis-action="forward"]').isDisabled())break;
-     await replay.locator('[data-analysis-action="forward"]').click();step++;
-     assert.equal(await page.evaluate(()=>current),i);
-    }while(step<20);
-    if(width===1280)await page.screenshot({path:path.join(process.env.TEMP,`complexity-${op}.png`)});
-    await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowLeft');
-    assert.match(await replay.locator('.step-count').textContent(),new RegExp(`Step ${step} of`));
-    for(let n=step-1;n>=0;n--){await replay.locator('[data-analysis-action="back"]').click();await check(page,`${width} ${op} back ${n}`);}
-    await replay.locator('[data-analysis-action="forward"]').click();await replay.locator('[data-analysis-action="reset"]').click();
-    assert.equal(await replay.locator('.output .cell').count(),0);
-   }
-   if([8,12,16].includes(i)) {
+   if([7,10,13].includes(i)) {
     const root=page.locator('.slide:not([hidden]) [data-venn-operation]');
     const op=await root.getAttribute('data-venn-operation');
     for(const reverse of op==='difference'?[false,true,false,true]:[false]) {
@@ -159,13 +137,13 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
     await page.locator('#previous').click();await vennState(0);
    }
 
-   if(width===1280&&[0,1,2,5,15,16,17].includes(i))await page.screenshot({path:path.join(process.env.TEMP,`set-slide-${i+1}.png`)});
+   if(width===1280&&[0,1,2,5,11,13,14].includes(i))await page.screenshot({path:path.join(process.env.TEMP,`set-slide-${i+1}.png`)});
   }
   await page.evaluate(()=>navigate(2));await page.keyboard.press('ArrowRight');assert.match(page.url(),/#slide-4$/);
   await page.keyboard.press('ArrowLeft');assert.match(page.url(),/#slide-3$/);
   await page.evaluate(()=>location.hash='slide-4');await page.waitForFunction(()=>current===3);
-  await page.evaluate(()=>location.hash='slide-20');await page.waitForFunction(()=>current===19);
-  await page.reload();assert.equal(await page.evaluate(()=>current),19);
+  await page.evaluate(()=>location.hash='slide-15');await page.waitForFunction(()=>current===14);
+  await page.reload();assert.equal(await page.evaluate(()=>current),14);
   if(mobile){await page.locator('#continue-presentation').click();}
   await page.locator('#contents').click();
   assert(await page.locator('#index-dialog').evaluate(el=>el.scrollHeight<=el.clientHeight+1));
