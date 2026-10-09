@@ -31,11 +31,15 @@ const definitions = {
   complement: {name:'Complement', args:'U, A', sources:['U'], code:['C = empty HashSet','for each x in U:','    if not A.contains(x):','        C.insert(x)','return C'], time:'O(u)', space:'O(u)', assumption:'A is already hashed: scan U in expected O(u). Build A first for ordinary inputs: O(u + n) overall.', extra:'A new A index needs O(n) temporary space.'}
 };
 // Generate every iteration from actual membership tests; no hand-written trace frames.
-function makeSteps(operation, reverse = false) {
+function makeSteps(operation, reverse = false, buildIndex = false) {
   const config = definitions[operation], result = new Set();
   const lookupName = operation === 'complement' || reverse ? 'A' : 'B';
-  const lookup = new Set(operandValues(operation,lookupName));
+  const lookup = new Set(buildIndex ? [] : operandValues(operation,lookupName));
   const steps = [{result:[], title:'Initially', explanation:'Create an empty HashSet C. No elements have been processed.', line:0}];
+  if (buildIndex && operation !== 'union') operandValues(operation,lookupName).forEach((x,index) => {
+    lookup.add(x);
+    steps.push({source:lookupName,index,x,status:'indexed',result:[],indexValues:[...lookup],title:`Index ${x} in ${lookupName}`,explanation:`Insert ${x} into the temporary ${lookupName} index: one hash insertion.`,line:1,building:true});
+  });
   for (const source of (reverse ? ['B'] : config.sources)) EXAMPLES[source].forEach((x, index) => {
     const found = operation === 'union' ? result.has(x) : lookup.has(x);
     const accepted = operation === 'union' ? !found : operation === 'intersection' ? found : !found;
@@ -121,26 +125,58 @@ if (operation === 'union') return unionVennSlide();
 const text={union:'Shade both circles, including the overlap. Shared values belong to the result once.',intersection:'Shade only the overlap: 3 and 4 belong to both A and B.',difference:'The shaded region changes when the operands change order.',complement:'Shade the part of U outside A. The universe determines what “outside” means.'};
 return {title:`${definitions[operation].name} Venn Diagram`,section:'SEE THE RESULT',html:operation==='difference'?`<p class="lead">${text[operation]}</p><div class="comparison"><div class="card">${venn(operation)}<div class="formula">A − B = ${fmt(results.difference)}</div></div><div class="card">${venn(operation,true)}<div class="formula">B − A = ${fmt(results.reverse)}</div></div></div>`:`<p class="lead">${text[operation]}</p><div class="venn-lesson"><div>${venn(operation)}</div><div>${card('Given',operation==='complement'?`<p>U = ${fmt(EXAMPLES.U)}</p><p>A = ${fmt(EXAMPLES.complementA)}</p>`:given())}<div class="formula">${lessons[operation][2]}<br>= ${fmt(results[operation])}</div></div></div>`};
 }
-const motivation={title:'Why Sets Matter in Computing',section:'WHY SET SEMANTICS MATTER',html:`<p class="lead">Arrays can contain repeated values. Concatenation appends every entry; set union keeps unique values.</p><div class="motivation-given">Array A = [${EXAMPLES.A.join(', ')}] <span>Array B = [${EXAMPLES.B.join(', ')}]</span></div><div class="comparison"><div class="card"><div class="card-label">Append · preserve every entry</div><h3>Array concatenation</h3><div id="concat-cells" class="cells"></div><p id="concat-caption"></p></div><div class="card"><div class="card-label">After · enforce uniqueness</div><h3>Set union</h3><div id="unique-cells" class="cells"></div><p id="unique-caption"></p></div></div><div class="callout" id="motivation-caption" aria-live="polite"></div><div class="step-toolbar"><button id="motivation-next" class="primary">Next Step →</button><button id="motivation-reset">Reset</button><span id="motivation-count"></span></div>`};
-const performance={title:'Complexity Comparison',section:'THE COST OF THE IMPLEMENTATION',html:`<p class="lead">Ordinary inputs: build any needed hash index, then scan.<br>n = |A|, m = |B|, u = |U|. Hash operations take <strong>expected O(1)</strong>.</p><div class="card table-card"><table><thead><tr><th>Operation</th><th>Expected total time</th><th>Additional space, including output</th></tr></thead><tbody><tr><td>Union</td><td>O(n + m)</td><td>O(n + m)</td></tr><tr><td>Intersection</td><td>O(n + m)</td><td>O(m + min(n, m)) · index B + output</td></tr><tr><td>Difference A − B</td><td>O(n + m)</td><td>O(m + n) · index B + output</td></tr><tr><td>Complement U − A</td><td>O(u + n)</td><td>O(n + u) · index A + output</td></tr></tbody></table></div><div class="callout">If both operands are already hash sets, intersection can scan the smaller set in expected <strong>O(min(n, m))</strong> time, excluding construction.</div><p class="note">Space bounds are upper bounds for these implementations. Expected hash performance is not a worst-case guarantee.</p>`};
-const summary={title:'Four questions. Four operations.',section:'SUMMARY',html:`<p class="lead">Choose the operation by what you want to keep.</p><div class="cards summary">${[['∪','Union','In A or B',results.union],['∩','Intersection','In A and B',results.intersection],['−','Difference','In A, not B',results.difference],['ᶜ','Complement','In U, not A',results.complement]].map(([symbol,name,meaning,result])=>`<div class="card"><div class="symbol">${symbol}</div><h3>${name}</h3><p>${meaning}</p><p class="summary-result">${fmt(result)}</p></div>`).join('')}</div><p class="closing">The operation determines the result.<br>The data structure determines the cost.</p>`};
+const performance={title:'Complexity Comparison',section:'THE COST OF THE IMPLEMENTATION',html:`<p class="lead">Ordinary inputs: build any needed hash index, then scan.<br>n = |A|, m = |B|, u = |U|. Hash operations take <strong>expected O(1)</strong>.</p><div class="card table-card"><table><thead><tr><th>Operation</th><th>Expected total time</th><th>Additional space, including output</th></tr></thead><tbody><tr><td>Union</td><td>O(n + m)</td><td>O(n + m)</td></tr><tr><td>Intersection</td><td>O(n + m)</td><td>O(n + m)</td></tr><tr><td>Difference A − B</td><td>O(n + m)</td><td>O(n + m)</td></tr><tr><td>Complement U − A</td><td>O(u + n)</td><td>O(u + n)</td></tr></tbody></table></div><div class="callout">If both operands are already hash sets, intersection can scan the smaller set in expected <strong>O(min(n, m))</strong> time, excluding construction.</div><p class="note">These are expected-time bounds, not unconditional worst-case hash-table guarantees. Space includes newly created outputs and temporary hash indexes. u is the universal-set size.</p>`};
 
+// Complexity replays use the same membership decisions as the normal walkthroughs.
+const analysisInfo = {
+ union:{sizes:'n = |A| = 4 · m = |B| = 4',time:'O(n + m)',space:'O(n + m)',output:'O(n + m)',why:'8 attempts = n + m, even though only 6 values are stored. Big O describes scaling with input size, not O(8).'},
+ intersection:{sizes:'n = |A| = 4 · m = |B| = 4',time:'O(m + n)',space:'O(m + min(n, m)) ⊆ O(n + m)',output:'O(min(n, m))',why:'Build B in m insertions, then check n values of A. Shared values alone grow the output; each hash operation takes expected O(1).'},
+ difference:{sizes:'n = |A| = 4 · m = |B| = 4',time:'O(m + n)',space:'O(m + n)',output:'O(n)',why:'Build B in m insertions, then check n values of A. Keep absent values. A − B ≠ B − A; this replay computes A − B.'},
+ complement:{sizes:'u = |U| = 8 · n = |A| = 4',time:'O(n + u)',space:'O(n + u)',output:'O(u)',why:'Build A in n insertions, then check all u values of U. Only values in the defined universe can enter the complement.'}
+};
+const complexityTraces = Object.fromEntries(Object.keys(definitions).map(op=>{
+ const frames=makeSteps(op,false,true), indexed=op!=='union';
+ let processed=0,insertions=0,checks=0,accepted=0,skipped=0,indexValues=[];
+ const steps=frames.map((frame,i)=>{
+  if(frame.source){processed++;if(frame.building){insertions++;indexValues=frame.indexValues;}else{
+   if(indexed)checks++;else insertions++;
+   if(frame.status==='accepted')accepted++;else skipped++;
+  }}
+  return {...frame,indexValues:[...indexValues],processed,insertions,checks,accepted,skipped,
+   line:frame.building?1:indexed && i>0?frame.line+1:frame.line,
+   phase:i===0?'Ready':i===frames.length-1?'Complete':frame.building?'Build membership index':op==='union'?`Scan ${frame.source} · insert output`:'Scan input · membership check'};
+ });
+ return [op,{steps,position:0}];
+}));
+function complexitySlide(op){
+ const info=analysisInfo[op],indexed=op!=='union',lookup=op==='complement'?'A':'B';
+ const code=[...definitions[op].code];if(indexed)code.splice(1,0,`index ${lookup}: insert each value`);
+ return {title:`${definitions[op].name} Complexity Analysis`,html:`<div class="complexity-replay" data-complexity="${op}">
+ <div class="analysis-assumption">${info.sizes} <span>${indexed?`Build a new ${lookup} hash index; C starts empty.`:'New HashSet C; no temporary index.'}</span></div>
+ <div class="operands">${operandRows(op)}</div>
+ <div class="analysis-grid"><div class="analysis-work"><div class="analysis-live" aria-live="polite" aria-atomic="true"><strong class="analysis-phase"></strong><p class="analysis-explanation"></p></div>
+ <div class="analysis-counters"></div><div class="analysis-progress"></div>
+ <div class="analysis-memory"><div><strong>Output C · <span class="analysis-size"></span> stored</strong><div class="cells output"></div></div>${indexed?`<div><strong>Temporary index ${lookup}</strong><div class="cells analysis-index"></div></div>`:''}</div>
+ </div><div class="analysis-theory"><div class="pseudocode card"><pre>${code.map((line,i)=>`<span class="line" data-line="${i}">${line}</span>`).join('')}</pre></div>
+ <div class="analysis-bounds"><p><strong>Expected time: ${info.time}</strong><br>${indexed?`Build ${op==='complement'?'n':'m'} + scan ${op==='complement'?'u':'n'}. Already hashed? Scan only ${op==='complement'?'O(u)':'O(n)'}.`:'n + m expected O(1) insertion attempts.'}</p><p><strong>Output bound: ${info.output}</strong><br>Total extra space: ${info.space}${indexed?`<br>Includes index ${lookup} + output C.`:' · result C only.'}</p></div></div></div>
+ <div class="analysis-summary">${info.why} Space counts stored elements; the bound grows with input size.</div>
+ <div class="step-toolbar"><button data-analysis-action="back">← Previous Step</button><button class="primary" data-analysis-action="forward">Next Step →</button><button data-analysis-action="reset">Reset</button><span class="step-count"></span></div>
+ <p class="analysis-note">Modeled operations, not measured runtime or bytes. Fixed demonstration order; hash sets do not guarantee sorted traversal.</p></div>`};
+}
 const slides = [
  {title:'Set Operations',section:'01 / Collections, compared',html:`<div class="title-layout"><div><h1>SET<br>OPERATIONS</h1><div class="title-rule"></div><p class="lead">Advanced Data Structure<br>and Algorithm Analysis</p><p class="presenter">Presented by: <strong>Jay-ar Mesquiola</strong></p><p class="title-topics">Union · Intersection · Difference · Complement</p><p class="note">Use the arrow keys to explore →</p></div><div class="title-art"><div class="art-card"><div class="art-label">TWO COLLECTIONS</div><div class="cells">${cells(EXAMPLES.A)}</div><div class="art-label">∪</div><div class="cells">${cells(EXAMPLES.B)}</div><div class="art-arrow">↓</div><div class="art-label">ONE SET OF UNIQUE ELEMENTS</div><div class="cells">${cells(unique([...EXAMPLES.A,...EXAMPLES.B]))}</div></div><p class="art-note">Different questions. The right collection.</p></div></div>`},
  {title:'Set operations in computing',html:`<p class="lead overview-definition">Set operations are fundamental computational procedures used to combine, compare, and filter collections of unique elements. In computer science, they help organize data, eliminate duplicates, identify shared values, and isolate specific subsets efficiently.</p><div class="cards overview-cards">${overview.map(([symbol,name])=>`<div class="card"><div class="symbol">${symbol}</div><h3>${name}</h3></div>`).join('')}</div><p class="overview-emphasis">A set stores unique elements only — duplicates are ignored.</p>`},
- motivation,
- concept('union'), {title:'Union Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('union')}, diagramSlide('union'),
- concept('intersection'), {title:'Intersection Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('intersection')}, diagramSlide('intersection'),
- concept('difference'), {title:'Difference Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('difference')}, diagramSlide('difference'),
- concept('complement'), {title:'Complement Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('complement')}, diagramSlide('complement'),
+ concept('union'), {title:'Union Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('union')}, diagramSlide('union'), complexitySlide('union'),
+ concept('intersection'), {title:'Intersection Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('intersection')}, diagramSlide('intersection'), complexitySlide('intersection'),
+ concept('difference'), {title:'Difference Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('difference')}, diagramSlide('difference'), complexitySlide('difference'),
+ concept('complement'), {title:'Complement Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('complement')}, diagramSlide('complement'), complexitySlide('complement'),
  performance,
- {title:'Where these algorithms show up',section:'APPLICATIONS',html:`<p class="lead">Small membership decisions power larger systems.</p><div class="cards">${[['∪','Combine users','Merge two user-ID collections into one deduplicated audience.'],['∩','Shared neighbors','Find vertices adjacent to both graph nodes, or tags shared by two records.'],['−','Filter blocked IDs','Start with candidate IDs and remove every ID in the blocked set.'],['ᶜ','Find what’s missing','From the eligible universe, select records that have not yet been selected.']].map(([s,n,d])=>`<div class="card"><div class="symbol">${s}</div><h3>${n}</h3><p>${d}</p></div>`).join('')}</div><div class="callout"><strong>Union-Find / DSU is a different ADT.</strong> It stores partitions and supports find / union for connectivity, cycle detection, and Kruskal’s algorithm. It does not directly produce A ∪ B as a deduplicated collection.</div>`},
- summary
+ {title:'Practical Applications and Conclusion',section:'APPLICATIONS',html:`<p class="lead">Small membership decisions power larger systems.</p><div class="cards">${[['∪','Combine users','Merge two user-ID collections into one deduplicated audience.'],['∩','Shared neighbors','Find vertices adjacent to both graph nodes, or tags shared by two records.'],['−','Filter blocked IDs','Start with candidate IDs and remove every ID in the blocked set.'],['ᶜ','Find what’s missing','From the eligible universe, select records that have not yet been selected.']].map(([s,n,d])=>`<div class="card"><div class="symbol">${s}</div><h3>${n}</h3><p>${d}</p></div>`).join('')}</div><p class="closing">The operation determines the result.<br>The data structure determines the cost.</p>`}
 ];
-// Keep original numeric bookmarks; retired ADT bookmark redirects to motivation.
-slides.forEach((slide, i) => { slide.bookmark = i < 3 ? i + 1 : i + 2; });
+// Numeric deep links match the visible slide numbers.
+slides.forEach((slide, i) => { slide.bookmark = i + 1; });
 const deck = document.getElementById('deck');
-deck.innerHTML = slides.map((slide,i)=>`<section class="slide ${i===0?'cover-slide':i===1?'overview-slide':slide.title==='Union Venn Diagram'?'union-venn-slide':slide.html.includes('class="walkthrough"')?'walkthrough-slide':'concept-slide'}" id="slide-${slide.bookmark}" aria-labelledby="title-${i+1}" ${i?'hidden':''}>${i?`<h2 id="title-${i+1}">${slide.title}</h2>`:''}${slide.html}</section>`).join('');
+deck.innerHTML = slides.map((slide,i)=>`<section class="slide ${i===0?'cover-slide':i===1?'overview-slide':slide.html.includes('data-complexity=')?'complexity-slide':slide.title==='Union Venn Diagram'?'union-venn-slide':slide.html.includes('class="walkthrough"')?'walkthrough-slide':'concept-slide'}" id="slide-${slide.bookmark}" aria-labelledby="title-${i+1}" ${i?'hidden':''}>${i?`<h2 id="title-${i+1}">${slide.title}</h2>`:''}${slide.html}</section>`).join('');
 deck.querySelector('h1').id = 'title-1';
 function renderTrace(operation) {
   const trace = traces[operation], step = trace.steps[trace.position];
@@ -298,7 +334,7 @@ window.visualViewport?.addEventListener('scroll', fitCanvas);
 screen.orientation?.addEventListener('change', fitCanvas);
 // Swipe only blank slide surfaces; widgets retain their own gestures.
 let swipe = null;
-const interactive = target => target.closest('button,a,input,select,textarea,.walkthrough,.union-venn-walkthrough,.comparison,.step-toolbar,dialog');
+const interactive = target => target.closest('button,a,input,select,textarea,.walkthrough,.complexity-replay,.union-venn-walkthrough,.comparison,.step-toolbar,dialog');
 deck.addEventListener('pointerdown', event => {
   swipe = event.pointerType === 'touch' && !interactive(event.target) ? {x:event.clientX,y:event.clientY,id:event.pointerId} : null;
 });
@@ -312,29 +348,12 @@ deck.addEventListener('pointercancel', () => { swipe = null; });
 function readHash() {
   const match = location.hash.match(/^#slide-(\d+)$/);
   const bookmark = match ? Number(match[1]) : 1;
-  const index = bookmark === 4 ? 2 : slides.findIndex(slide => slide.bookmark === bookmark);
+  const index = slides.findIndex(slide => slide.bookmark === bookmark);
   navigate(index < 0 ? 0 : index);
 }
 window.addEventListener('hashchange', readHash);
 readHash();
 fitCanvas();
-// Concatenation and union share inputs, but apply different membership rules.
-let motivationPosition = 0;
-function renderMotivation() {
-  const joined = [...EXAMPLES.A,...EXAMPLES.B];
-  document.getElementById('concat-cells').innerHTML = motivationPosition ? joined.map((x,i)=>`<span class="cell ${joined.indexOf(x)!==i?'duplicate':''}">${x}</span>`).join('') : '<span class="empty">Ready to append A and B</span>';
-  document.getElementById('unique-cells').innerHTML = motivationPosition===2 ? cells(unique(joined)) : '<span class="empty">Waiting to apply set semantics</span>';
-  document.getElementById('concat-caption').textContent = motivationPosition ? '8 entries: the second 3 and 4 are repeated.' : 'Append every entry, without checking duplicates.';
-  document.getElementById('unique-caption').textContent = motivationPosition===2 ? '6 unique values: repeated insertions change nothing.' : 'A HashSet stores unique values using hashing; insertion and lookup take expected O(1).';
-  document.getElementById('motivation-caption').textContent = ['Initially: compare two ways to combine the same inputs.','Concatenation alone does not remove duplicates.','Union always contains unique values. Arrays can also be deduplicated with explicit checks; a hash set is one efficient implementation.'][motivationPosition];
-  document.getElementById('motivation-count').textContent = `Step ${motivationPosition} of 2`;
-  document.getElementById('motivation-next').disabled = motivationPosition===2;
-  document.getElementById('motivation-reset').disabled = motivationPosition===0;
-}
-document.getElementById('motivation-next').addEventListener('click',()=>{motivationPosition=Math.min(2,motivationPosition+1);renderMotivation();});
-document.getElementById('motivation-reset').addEventListener('click',()=>{motivationPosition=0;renderMotivation();});
-renderMotivation();
-
 // This state is independent of algorithm traces and survives slide navigation.
 let unionVennPosition = 0;
 const unionVennRoot = document.querySelector('.union-venn-walkthrough');
@@ -371,3 +390,40 @@ unionVennRoot.addEventListener('click', event => {
   renderUnionVenn(unionVennPosition > previous);
 });
 renderUnionVenn();
+
+function renderComplexity(op){
+ const trace=complexityTraces[op],step=trace.steps[trace.position],root=document.querySelector(`[data-complexity="${op}"]`),indexed=op!=='union';
+ root.dataset.activeSource=step.source||'none';
+ root.querySelectorAll('[data-source]').forEach(row=>{
+  const source=row.dataset.source,active=source===step.source;
+  root.querySelector(`[data-panel="${source}"]`).classList.toggle('scanning',active);
+  root.querySelector(`[data-panel-status="${source}"]`).textContent=active?(step.building?'Indexing ↓':'Scanning ↓'):'';
+  [...row.children].forEach((cell,i)=>{
+   const done=trace.steps.slice(1,trace.position+1).find(f=>f.source===source&&f.index===i);
+   cell.className=`cell${done?` ${done.status} processed`:''}${active&&step.index===i?' active':''}`;
+   cell.setAttribute('aria-label',`${cell.textContent}${done?', processed':''}${active&&step.index===i?', active':''}`);
+  });
+ });
+ root.querySelector('.analysis-phase').textContent=step.phase;
+ root.querySelector('.analysis-explanation').textContent=step.building?step.explanation:step.source?op==='union'?`Insert ${step.x} from ${step.source}: one insertion attempt. ${step.status==='duplicate'?'Already present; output does not grow.':'One new output value.'}`:`Check whether ${step.x} is in ${step.lookupName}: ${step.found?'present':'absent'}. ${step.status==='accepted'?'Include it in C.':'Exclude it; C does not grow.'}`:step.explanation;
+ const counters=[['Input processed',step.processed],[indexed?'Index insertions':'Insertion attempts',step.insertions],...(indexed?[['Membership checks',step.checks]]:[]),['Output insertions',step.accepted],['Skipped',step.skipped]];
+ root.querySelector('.analysis-counters').innerHTML=counters.map(([label,n])=>`<div><b>${n}</b><span>${label}</span></div>`).join('');
+ const phases=indexed?[{label:`Build ${op==='complement'?'A':'B'}`,total:4,value:step.insertions},{label:`Scan ${op==='complement'?'U':'A'}`,total:op==='complement'?8:4,value:step.checks}]:[{label:'Scan A',total:4,value:Math.min(step.insertions,4)},{label:'Scan B',total:4,value:Math.max(0,step.insertions-4)}];
+ root.querySelector('.analysis-progress').innerHTML=phases.map(p=>`<div><span>${p.label}: ${p.value} / ${p.total}</span><progress value="${p.value}" max="${p.total}" aria-label="${p.label}"></progress></div>`).join('');
+ root.querySelector('.analysis-size').textContent=step.result.length;
+ root.querySelector('.output').innerHTML=step.result.length?step.result.map(x=>`<span class="cell output-value${step.status==='accepted'&&x===step.x?' newly-inserted':''}">${x}</span>`).join(''):'<span class="empty">∅</span>';
+ if(indexed)root.querySelector('.analysis-index').innerHTML=step.indexValues.length?cells(step.indexValues):'<span class="empty">∅</span>';
+ root.querySelectorAll('[data-line]').forEach(el=>{const active=Number(el.dataset.line)===step.line;el.classList.toggle('current',active);if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
+ root.querySelector('.analysis-summary').classList.toggle('revealed',trace.position===trace.steps.length-1);
+ root.querySelector('[data-analysis-action="back"]').disabled=trace.position===0;
+ root.querySelector('[data-analysis-action="reset"]').disabled=trace.position===0;
+ root.querySelector('[data-analysis-action="forward"]').disabled=trace.position===trace.steps.length-1;
+ root.querySelector('.step-count').textContent=`Step ${trace.position} of ${trace.steps.length-1}`;
+}
+Object.keys(complexityTraces).forEach(renderComplexity);
+deck.addEventListener('click',event=>{
+ const button=event.target.closest('[data-analysis-action]');if(!button)return;
+ const op=button.closest('[data-complexity]').dataset.complexity,trace=complexityTraces[op];
+ trace.position=button.dataset.analysisAction==='reset'?0:Math.max(0,Math.min(trace.steps.length-1,trace.position+(button.dataset.analysisAction==='forward'?1:-1)));
+ renderComplexity(op);
+});

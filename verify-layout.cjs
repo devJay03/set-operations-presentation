@@ -46,10 +46,10 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
    }
    await page.waitForFunction(()=>document.getElementById('mobile-prompt').hidden);
   }
-  assert.equal(await page.locator('.slide').count(),18);
-  assert.equal(await page.locator('#index-links button').count(),18);
+  assert.equal(await page.locator('.slide').count(),20);
+  assert.equal(await page.locator('#index-links button').count(),20);
   assert.equal(await page.getByText('Sets as an Abstract Data Type',{exact:true}).count(),0);
-  for(let i=0;i<18;i++) {
+  for(let i=0;i<20;i++) {
    await page.evaluate(i=>navigate(i),i);await check(page,`${width}x${height} slide ${i+1}`);
    const root=page.locator('.slide:not([hidden]) [data-operation]');
    if(await root.count()) {
@@ -67,7 +67,29 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
      assert.match(await root.locator('.step-count').innerText(),/^Step 0/);
     }
    }
-   if(i===5) {
+   const replay=page.locator('.slide:not([hidden]) [data-complexity]');
+   if(await replay.count()) {
+    const op=await replay.getAttribute('data-complexity');
+    let step=0;
+    do {
+     await check(page,`${width} complexity ${op} step ${step}`);
+     const snapshot=await page.evaluate(op=>{const t=complexityTraces[op];return t.steps[t.position]},op);
+     assert.equal(await replay.locator('.output .cell').count(),snapshot.result.length);
+     assert.equal(await replay.locator('.line.current').count(),1);
+     assert.equal(await replay.locator('.line.current').getAttribute('data-line'),String(snapshot.line));
+     assert.deepEqual(await replay.locator('.analysis-counters b').allTextContents(),[snapshot.processed,snapshot.insertions,...(op==='union'?[]:[snapshot.checks]),snapshot.accepted,snapshot.skipped].map(String));
+     if(await replay.locator('[data-analysis-action="forward"]').isDisabled())break;
+     await replay.locator('[data-analysis-action="forward"]').click();step++;
+     assert.equal(await page.evaluate(()=>current),i);
+    }while(step<20);
+    if(width===1280)await page.screenshot({path:path.join(process.env.TEMP,`complexity-${op}.png`)});
+    await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowLeft');
+    assert.match(await replay.locator('.step-count').textContent(),new RegExp(`Step ${step} of`));
+    for(let n=step-1;n>=0;n--){await replay.locator('[data-analysis-action="back"]').click();await check(page,`${width} ${op} back ${n}`);}
+    await replay.locator('[data-analysis-action="forward"]').click();await replay.locator('[data-analysis-action="reset"]').click();
+    assert.equal(await replay.locator('.output .cell').count(),0);
+   }
+   if(i===4) {
     const venn=page.locator('.union-venn-walkthrough');
     async function vennState(step) {
      assert.equal(await venn.locator('.union-region.selected').count(),Math.min(step,3));
@@ -88,7 +110,7 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
      const button=venn.locator(`[data-venn-action="${name}"]`);
      if(mobile)await button.tap();else await button.click();
      await page.waitForTimeout(50);
-     assert.equal(await page.evaluate(()=>current),5);
+     assert.equal(await page.evaluate(()=>current),4);
     }
     await vennState(0);
     for(let step=1;step<=4;step++) {
@@ -96,7 +118,7 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
      if(width===1280||width===844)await page.screenshot({path:path.join(process.env.TEMP,`set-union-venn-${width}-step-${step}.png`)});
     }
     await venn.locator('[data-venn-action="forward"]').dispatchEvent('click');await vennState(4);
-    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>current),6);
+    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>current),5);
     await page.keyboard.press('ArrowLeft');await vennState(4);
     for(let step=3;step>=0;step--){await action('back');await vennState(step);}
     await action('forward');
@@ -104,18 +126,18 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
     await action('forward');await action('reset');await vennState(0);
     await venn.dispatchEvent('pointerdown',{pointerType:'touch',pointerId:1,clientX:500,clientY:200});
     await venn.dispatchEvent('pointerup',{pointerType:'touch',pointerId:1,clientX:400,clientY:200});
-    assert.equal(await page.evaluate(()=>current),5);await vennState(0);
-    await page.locator('#next').click();assert.equal(await page.evaluate(()=>current),6);
+    assert.equal(await page.evaluate(()=>current),4);await vennState(0);
+    await page.locator('#next').click();assert.equal(await page.evaluate(()=>current),5);
     await page.locator('#previous').click();await vennState(0);
    }
-   if(i===2)for(let n=0;n<2;n++){await page.locator('#motivation-next').click();await check(page,`${width} motivation ${n}`);}
+
    if(width===1280&&[0,1,2,5,15,16,17].includes(i))await page.screenshot({path:path.join(process.env.TEMP,`set-slide-${i+1}.png`)});
   }
-  await page.evaluate(()=>navigate(2));await page.keyboard.press('ArrowRight');assert.match(page.url(),/#slide-5$/);
+  await page.evaluate(()=>navigate(2));await page.keyboard.press('ArrowRight');assert.match(page.url(),/#slide-4$/);
   await page.keyboard.press('ArrowLeft');assert.match(page.url(),/#slide-3$/);
-  await page.evaluate(()=>location.hash='slide-4');await page.waitForFunction(()=>location.hash==='#slide-3');
-  await page.evaluate(()=>location.hash='slide-19');await page.waitForFunction(()=>current===17);
-  await page.reload();assert.equal(await page.evaluate(()=>current),17);
+  await page.evaluate(()=>location.hash='slide-4');await page.waitForFunction(()=>current===3);
+  await page.evaluate(()=>location.hash='slide-20');await page.waitForFunction(()=>current===19);
+  await page.reload();assert.equal(await page.evaluate(()=>current),19);
   if(mobile){await page.locator('#continue-presentation').click();}
   await page.locator('#contents').click();
   assert(await page.locator('#index-dialog').evaluate(el=>el.scrollHeight<=el.clientHeight+1));
@@ -129,11 +151,11 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
    await slide.dispatchEvent('pointerdown',{pointerType:'touch',pointerId:1,clientX:500,clientY:200});
    await slide.dispatchEvent('pointerup',{pointerType:'touch',pointerId:1,clientX:400,clientY:200});
    assert.equal(await page.evaluate(()=>current),2);
-   await page.evaluate(()=>navigate(4));
+   await page.evaluate(()=>navigate(3));
    const widget=page.locator('.slide:not([hidden]) .walkthrough');
    await widget.dispatchEvent('pointerdown',{pointerType:'touch',pointerId:1,clientX:500,clientY:200});
    await widget.dispatchEvent('pointerup',{pointerType:'touch',pointerId:1,clientX:400,clientY:200});
-   assert.equal(await page.evaluate(()=>current),4);
+   assert.equal(await page.evaluate(()=>current),3);
   }
   await context.close();
  }

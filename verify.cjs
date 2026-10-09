@@ -6,7 +6,7 @@ const source = fs.readFileSync('script.js','utf8');
 const context = vm.createContext({});
 vm.runInContext(source.slice(0,source.indexOf('const deck ='))+';globalThis.lesson={slides,traces,makeSteps,codePanel,results};',context);
 const {slides,traces,makeSteps,codePanel,results} = context.lesson;
-assert.equal(slides.length,18);
+assert.equal(slides.length,20);
 assert(slides[0].html.includes('Jay-ar Mesquiola'));
 for (const [op,expected] of Object.entries({union:[1,2,3,4,5,6],intersection:[3,4],difference:[1,2],complement:[1,3,5,7]})) {
   const frames=traces[op].steps;
@@ -34,8 +34,8 @@ vm.runInContext(source.slice(source.indexOf("document.addEventListener('keydown'
 const key=(key,editable=false,button=false)=>context.document.keydown({key,target:{isContentEditable:editable,closest(selector){return selector==='button,a'?button:editable;}},preventDefault(){}});
 vm.runInContext('navigate(0)',context);
 assert(elements.previous.disabled);key('ArrowLeft');assert.equal(vm.runInContext('current',context),0);
-key('End');assert.equal(vm.runInContext('current',context),17);assert(elements.next.disabled);
-key('ArrowRight');assert.equal(vm.runInContext('current',context),17);
+key('End');assert.equal(vm.runInContext('current',context),19);assert(elements.next.disabled);
+key('ArrowRight');assert.equal(vm.runInContext('current',context),19);
 key('Home');key('ArrowRight');assert.equal(vm.runInContext('current',context),1);
 key('End',true);assert.equal(vm.runInContext('current',context),1);
 key(' ',false,true);assert.equal(vm.runInContext('current',context),1);
@@ -98,25 +98,30 @@ assert(root.querySelector('.output').innerHTML.includes('>1</span>'));
 root=show('complement',2);
 assert.equal(root.querySelector('.result-change').textContent,'No change');
 assert(root.querySelectorAll('[data-source]')[1].children[0].className.includes('match'));
-const complementOperand=slides[12].html.split('data-source="A"')[1].split('</div>')[0];
+const complementOperand=slides[14].html.split('data-source="A"')[1].split('</div>')[0];
 assert(complementOperand.includes('>2</span>') && !complementOperand.includes('>1</span>'));
-assert(slides[14].html.includes('2  4  6'));
-assert(slides[14].html.includes('{1, 3, 5, 7}'));
+assert(slides[16].html.includes('2  4  6'));
+assert(slides[16].html.includes('{1, 3, 5, 7}'));
 assert(slides[1].html.includes('Set operations are fundamental computational procedures'));
 assert(slides[1].html.includes('A set stores unique elements only — duplicates are ignored.'));
 const overviewCards=slides[1].html.split('<div class="cards overview-cards">')[1].split('<p class="overview-emphasis">')[0];
 assert(!overviewCards.includes('<p'));
 assert.equal((overviewCards.match(/class="symbol"/g)||[]).length,4);
-// Exercise the array-versus-set example's real controls.
-vm.runInContext(source.slice(source.indexOf('let motivationPosition ='),source.indexOf('// This state is independent')),context);
-assert(elements['motivation-reset'].disabled);
-elements['motivation-next'].handlers.click();
-assert.equal((elements['concat-cells'].innerHTML.match(/duplicate/g)||[]).length,2);
-elements['motivation-next'].handlers.click();
-assert(elements['motivation-next'].disabled);
-assert.equal((elements['unique-cells'].innerHTML.match(/class="cell"/g)||[]).length,6);
-elements['motivation-reset'].handlers.click();
-assert.equal(vm.runInContext('motivationPosition',context),0);
 const assets=['index.html','styles.css','script.js'].map(file=>fs.readFileSync(file,'utf8')).join('\n');
 assert(!/https?:\/\/|@import|fetch\(/.test(assets));
-console.log('PASS: 18 slides, all results and iterations, reverse difference, paired operands, step forward/back/reset/bounds, direction reset, navigation keys/bounds/editable focus, source highlights, processed states, output deltas, exact pseudocode line, complement consistency, symbol-only overview, offline dependencies.');
+console.log('PASS: 20 slides, all results and iterations, reverse difference, paired operands, step forward/back/reset/bounds, direction reset, navigation keys/bounds/editable focus, source highlights, processed states, output deltas, exact pseudocode line, complement consistency, symbol-only overview, offline dependencies.');
+
+vm.runInContext('globalThis.analysis=complexityTraces',context);
+for(const [op,t] of Object.entries(context.analysis)){
+ const last=t.steps.at(-1);
+ assert.deepEqual(Array.from(last.result),Array.from(results[op]));
+ assert.equal(last.insertions,op==='union'?8:4);
+ assert.equal(last.checks,op==='union'?0:op==='complement'?8:4);
+ assert.equal(last.accepted,op==='union'?6:op==='complement'?4:2);
+ assert.equal(last.skipped,op==='complement'?4:2);
+ assert.equal(last.processed,op==='complement'?12:8);
+ for(const f of t.steps){assert.equal(f.result.length,f.accepted);assert.equal(f.processed,f.insertions+f.checks);}
+}
+assert.deepEqual(Array.from(slides.filter(s=>s.title.includes('Complexity Analysis')),s=>s.bookmark),[6,10,14,18]);
+assert(!slides.some(s=>/Why Sets Matter|Set ADT/.test(s.title)));
+console.log('PASS: complexity accounting, shared results, phase counts, and slide order.');
