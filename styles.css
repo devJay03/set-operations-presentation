@@ -176,3 +176,13 @@ body{display:block;background:#ded5c9;border:0;font-size:26px;line-height:1.42}
 .analysis-theory .pseudocode{padding:12px}.analysis-theory pre{font-size:21px;line-height:1.5}.analysis-bounds{font-size:20px;line-height:1.35}.analysis-bounds p{margin:10px 0 0}.analysis-bounds strong{color:var(--heading)}
 .analysis-summary{visibility:hidden;margin-top:12px;padding:10px 14px;border:2px solid #ab8437;background:#fff0c9;font-size:21px;line-height:1.35;min-height:79px}.analysis-summary.revealed{visibility:visible}.complexity-replay .step-toolbar{margin-top:12px}.analysis-note{font-size:17px;margin:8px 0 0;color:var(--muted)}
 @media(pointer:coarse){.complexity-slide{padding-block:10px}.complexity-slide h2{font-size:50px}.complexity-replay .step-toolbar button{min-height:86px}.analysis-summary{margin-top:8px}.analysis-note{margin-top:5px}}
+/* Operation diagrams extend the Union presentation without changing its palette or layout. */
+.operation-venn .union-region.inspecting{fill-opacity:.55;stroke:var(--heading);stroke-width:3;stroke-dasharray:7 5}
+.operation-venn .union-region.selected{fill:#dfc589;fill-opacity:1}
+.universe-outline{fill:none;stroke:#50463e;stroke-width:2}
+.universe-outline.universe-active{stroke:var(--set-b);stroke-width:5;stroke-dasharray:9 5}
+.complement-given{flex-direction:column;gap:2px;font-size:23px}
+.complement-given span:first-child{color:var(--set-b)}
+.complement-given span:last-child{color:var(--set-a)}
+.operation-venn .direction{margin:0 0 12px;gap:8px}
+.operation-venn .union-venn-formula{font-size:28px}

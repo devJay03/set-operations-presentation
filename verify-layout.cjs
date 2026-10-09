@@ -89,8 +89,36 @@ const url = pathToFileURL(path.join(__dirname, 'index.html')).href;
     await replay.locator('[data-analysis-action="forward"]').click();await replay.locator('[data-analysis-action="reset"]').click();
     assert.equal(await replay.locator('.output .cell').count(),0);
    }
+   if([8,12,16].includes(i)) {
+    const root=page.locator('.slide:not([hidden]) [data-venn-operation]');
+    const op=await root.getAttribute('data-venn-operation');
+    for(const reverse of op==='difference'?[false,true,false,true]:[false]) {
+     if(op==='difference')await root.locator('[data-venn-direction="'+(reverse?'reverse':'forward')+'"]').click();
+     const symbol=op==='intersection'?'A ∩ B':op==='complement'?'Aᶜ = U − A':reverse?'B − A':'A − B';
+     const result=op==='intersection'?'{3, 4}':op==='complement'?'{1, 3, 5, 7}':reverse?'{5, 6}':'{1, 2}';
+     const selected=op==='intersection'?'1':op==='complement'?'0':reverse?'2':'0';
+     async function state(step) {
+      assert.equal(await root.locator('.step-count').textContent(),'Step '+step+' of 4');
+      assert.equal(await root.locator('.union-venn-formula').textContent(),symbol+' = '+(step>=3?result:'∅'));
+      assert.equal(await root.locator('[data-venn-action="back"]').isDisabled(),step===0);
+      assert.equal(await root.locator('[data-venn-action="forward"]').isDisabled(),step===4);
+      assert.equal(await root.locator('[data-venn-action="reset"]').isDisabled(),step===0);
+      assert.deepEqual(await root.locator('.selected').evaluateAll(els=>els.map(el=>el.dataset.region)),step>=3?[selected]:[]);
+      assert.equal(await root.locator('.inspecting').count(),step===1?(op==='intersection'?1:2):step===2?1:0);
+      await check(page,width+'x'+height+' '+op+' reverse='+reverse+' step '+step);
+     }
+     await state(0);
+     for(let step=1;step<=4;step++){await root.locator('[data-venn-action="forward"]').click();await state(step);}
+     if(width===1280)await page.screenshot({path:path.join(process.env.TEMP,'venn-'+op+'-'+reverse+'.png')});
+     await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>current),i+1);
+     await page.keyboard.press('ArrowLeft');await state(4);
+     for(let step=3;step>=0;step--){await root.locator('[data-venn-action="back"]').click();await state(step);}
+     await root.locator('[data-venn-action="forward"]').click();await root.locator('[data-venn-action="reset"]').click();await state(0);
+     if(op==='difference') {await root.locator('[data-venn-action="forward"]').click();await root.locator('[data-venn-direction="'+(reverse?'forward':'reverse')+'"]').click();assert.equal(await root.locator('.step-count').textContent(),'Step 0 of 4');}
+    }
+   }
    if(i===4) {
-    const venn=page.locator('.union-venn-walkthrough');
+    const venn=page.locator('#slide-5 .union-venn-walkthrough');
     async function vennState(step) {
      assert.equal(await venn.locator('.union-region.selected').count(),Math.min(step,3));
      assert.equal(await venn.locator('.current-values').count(),step>0&&step<4?1:0);

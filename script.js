@@ -89,8 +89,14 @@ const unionVennSteps = [
   ['Step 3 — Remaining elements of B', 'Add the elements found only in Set B.'],
   ['Step 4 — Union complete', 'The union includes all three regions, with no repeated elements.']
 ];
-function unionVennSlide() {
-  return {title:'Union Venn Diagram', html:`<p class="lead union-venn-description">A Venn diagram helps visualize how the union operation combines elements from two sets. Every element belonging to Set A, Set B, or both is included in the union.</p>
+function unionVennSlide(operation = 'union') {
+  const purposes = {
+    union:'A Venn diagram helps visualize how the union operation combines elements from two sets. Every element belonging to Set A, Set B, or both is included in the union.',
+    intersection:'A Venn diagram shows which elements are shared by both sets. For intersection, only the overlapping region is included in the result.',
+    difference:'A Venn diagram makes the direction of set difference clear: A − B keeps only the A-only region, while B − A keeps only the B-only region.',
+    complement:'A Venn diagram shows the complement as everything inside the universal set but outside the selected set.'
+  };
+  let html = `<p class="lead union-venn-description">${purposes[operation]}</p>
   <div class="union-venn-walkthrough" aria-label="Union Venn walkthrough">
     <div class="union-venn-layout">
       <div class="union-venn-visual">
@@ -118,12 +124,37 @@ function unionVennSlide() {
       </div>
     </div>
     <div class="step-toolbar"><button data-venn-action="back" disabled>← Previous Step</button><button data-venn-action="forward" class="primary">Next Step →</button><button data-venn-action="reset" disabled>Reset</button><span class="step-count"></span></div>
-  </div><p class="union-venn-note">Elements ${unionRegions[1].values.join(' and ')} belong to both sets, but appear only once in the result because sets contain unique elements.</p>`};
+  </div><p class="union-venn-note">${operation === 'union' ? `Elements ${unionRegions[1].values.join(' and ')} belong to both sets, but appear only once in the result because sets contain unique elements.` : operation === 'difference' ? 'Order matters: A − B is not generally equal to B − A.' : operation === 'complement' ? 'The complement is relative to U. Nothing outside its boundary is included.' : 'Shared membership matters: include a value only when it belongs to both A and B.'}</p>`;
+  if (operation !== 'union') {
+    // Reuse the Union layout, region geometry and controls with unique SVG IDs.
+    html = html.replace('class="union-venn-walkthrough"', `class="union-venn-walkthrough operation-venn" data-venn-operation="${operation}"`)
+      .replace('aria-label="Union Venn walkthrough"', `aria-label="${definitions[operation].name} Venn walkthrough"`)
+      .replace(/union-(only-a|only-b|overlap|venn-title|venn-description)/g, `${operation}-$1`)
+      .replace(`class="lead ${operation}-venn-description"`, 'class="lead union-venn-description"')
+      .replace('Three regions of A union B', `Regions of ${definitions[operation].name}`)
+      .replace('It shows which regions contribute to the result. For union, both circles, including the overlapping region, belong to the output.', operation === 'difference' ? 'Choose the starting set, remove shared values, then keep only its exclusive region.' : operation === 'complement' ? 'The rectangle defines the universe. Keep its elements only when they are outside A.' : 'The overlap identifies shared membership. Values in just one circle are excluded.');
+    if (operation === 'difference') html = html.replace('<div class="union-venn-why">', '<div class="union-venn-why"><div class="direction" role="group" aria-label="Venn difference direction"><button data-venn-direction="forward" aria-pressed="true">A − B</button><button data-venn-direction="reverse" aria-pressed="false">B − A</button></div>');
+    if (operation === 'complement') {
+      html = html.replace(/<div class="union-venn-given">[\s\S]*?<\/div>/, `<div class="union-venn-given complement-given"><span>U = ${fmt(EXAMPLES.U)}</span><span>A = ${fmt(EXAMPLES.complementA)}</span></div>`)
+        .replace(/<svg[\s\S]*?<\/svg>/, complementVennSvg());
+    }
+  }
+  return {title:`${definitions[operation].name} Venn Diagram`, html};
+}
+function complementVennSvg() {
+  return `<svg class="union-venn-svg" viewBox="0 0 560 310" role="img" aria-labelledby="complement-venn-title complement-venn-description">
+    <title id="complement-venn-title">Complement within universal set U</title><desc id="complement-venn-description">Inside A: 2, 4, 6, 8. Inside U but outside A: 1, 3, 5, 7.</desc>
+    <defs><mask id="complement-outside"><rect x="20" y="25" width="520" height="270" rx="12" fill="white"/><circle cx="350" cy="160" r="105" fill="black"/></mask></defs>
+    <rect class="union-region region-shared" data-region="0" x="20" y="25" width="520" height="270" rx="12" mask="url(#complement-outside)"/>
+    <circle class="union-region region-a" data-region="1" cx="350" cy="160" r="105"/>
+    <rect class="universe-outline" x="20" y="25" width="520" height="270" rx="12"/>
+    <circle class="union-outline outline-a" cx="350" cy="160" r="105"/>
+    <text class="union-set-label" x="38" y="60">U</text><text class="union-set-label label-a" x="340" y="95">A</text>
+    <g class="union-region-values" data-values="0"><text x="130" y="155" text-anchor="middle">1, 3, 5, 7</text><text class="union-region-name" x="130" y="184" text-anchor="middle">Inside U, outside A</text></g>
+    <g class="union-region-values" data-values="1"><text x="350" y="155" text-anchor="middle">2, 4, 6, 8</text><text class="union-region-name" x="350" y="184" text-anchor="middle">Inside A</text></g></svg>`;
 }
 function diagramSlide(operation) {
-if (operation === 'union') return unionVennSlide();
-const text={union:'Shade both circles, including the overlap. Shared values belong to the result once.',intersection:'Shade only the overlap: 3 and 4 belong to both A and B.',difference:'The shaded region changes when the operands change order.',complement:'Shade the part of U outside A. The universe determines what “outside” means.'};
-return {title:`${definitions[operation].name} Venn Diagram`,section:'SEE THE RESULT',html:operation==='difference'?`<p class="lead">${text[operation]}</p><div class="comparison"><div class="card">${venn(operation)}<div class="formula">A − B = ${fmt(results.difference)}</div></div><div class="card">${venn(operation,true)}<div class="formula">B − A = ${fmt(results.reverse)}</div></div></div>`:`<p class="lead">${text[operation]}</p><div class="venn-lesson"><div>${venn(operation)}</div><div>${card('Given',operation==='complement'?`<p>U = ${fmt(EXAMPLES.U)}</p><p>A = ${fmt(EXAMPLES.complementA)}</p>`:given())}<div class="formula">${lessons[operation][2]}<br>= ${fmt(results[operation])}</div></div></div>`};
+return unionVennSlide(operation);
 }
 const performance={title:'Complexity Comparison',section:'THE COST OF THE IMPLEMENTATION',html:`<p class="lead">Ordinary inputs: build any needed hash index, then scan.<br>n = |A|, m = |B|, u = |U|. Hash operations take <strong>expected O(1)</strong>.</p><div class="card table-card"><table><thead><tr><th>Operation</th><th>Expected total time</th><th>Additional space, including output</th></tr></thead><tbody><tr><td>Union</td><td>O(n + m)</td><td>O(n + m)</td></tr><tr><td>Intersection</td><td>O(n + m)</td><td>O(n + m)</td></tr><tr><td>Difference A − B</td><td>O(n + m)</td><td>O(n + m)</td></tr><tr><td>Complement U − A</td><td>O(u + n)</td><td>O(u + n)</td></tr></tbody></table></div><div class="callout">If both operands are already hash sets, intersection can scan the smaller set in expected <strong>O(min(n, m))</strong> time, excluding construction.</div><p class="note">These are expected-time bounds, not unconditional worst-case hash-table guarantees. Space includes newly created outputs and temporary hash indexes. u is the universal-set size.</p>`};
 
@@ -176,7 +207,7 @@ const slides = [
 // Numeric deep links match the visible slide numbers.
 slides.forEach((slide, i) => { slide.bookmark = i + 1; });
 const deck = document.getElementById('deck');
-deck.innerHTML = slides.map((slide,i)=>`<section class="slide ${i===0?'cover-slide':i===1?'overview-slide':slide.html.includes('data-complexity=')?'complexity-slide':slide.title==='Union Venn Diagram'?'union-venn-slide':slide.html.includes('class="walkthrough"')?'walkthrough-slide':'concept-slide'}" id="slide-${slide.bookmark}" aria-labelledby="title-${i+1}" ${i?'hidden':''}>${i?`<h2 id="title-${i+1}">${slide.title}</h2>`:''}${slide.html}</section>`).join('');
+deck.innerHTML = slides.map((slide,i)=>`<section class="slide ${i===0?'cover-slide':i===1?'overview-slide':slide.html.includes('data-complexity=')?'complexity-slide':slide.title.endsWith('Venn Diagram')?'union-venn-slide':slide.html.includes('class="walkthrough"')?'walkthrough-slide':'concept-slide'}" id="slide-${slide.bookmark}" aria-labelledby="title-${i+1}" ${i?'hidden':''}>${i?`<h2 id="title-${i+1}">${slide.title}</h2>`:''}${slide.html}</section>`).join('');
 deck.querySelector('h1').id = 'title-1';
 function renderTrace(operation) {
   const trace = traces[operation], step = trace.steps[trace.position];
@@ -377,19 +408,84 @@ function renderUnionVenn(animate = false) {
   unionVennRoot.querySelector('.union-venn-result').classList.toggle('complete', unionVennPosition === 4);
   unionVennRoot.querySelector('.union-venn-result .card-label').textContent = unionVennPosition === 4 ? `Final union · ${values.length} unique elements` : unionVennPosition === 0 ? 'Result so far · no elements included yet' : 'Result so far';
   unionVennRoot.querySelector('#union-venn-description').textContent = unionRegions.map((region,i)=>`${region.name}: ${region.values.join(', ')}; ${i<selected?'included':'not yet included'}.`).join(' ');
-  unionVennRoot.querySelector('[data-venn-action="back"]').disabled = unionVennPosition === 0;
-  unionVennRoot.querySelector('[data-venn-action="reset"]').disabled = unionVennPosition === 0;
-  unionVennRoot.querySelector('[data-venn-action="forward"]').disabled = unionVennPosition === 4;
-  unionVennRoot.querySelector('.step-count').textContent = `Step ${unionVennPosition} of 4`;
+  renderVennControls(unionVennRoot, unionVennPosition);
 }
 unionVennRoot.addEventListener('click', event => {
   const button = event.target.closest('[data-venn-action]');
   if (!button || button.disabled) return;
   const previous = unionVennPosition;
-  unionVennPosition = button.dataset.vennAction === 'reset' ? 0 : Math.max(0, Math.min(4, previous + (button.dataset.vennAction === 'forward' ? 1 : -1)));
+  unionVennPosition = nextVennPosition(previous, button.dataset.vennAction);
   renderUnionVenn(unionVennPosition > previous);
 });
 renderUnionVenn();
+
+// All diagrams share bounded step controls; each operation supplies its region decisions.
+function renderVennControls(root, position) {
+  root.querySelector('[data-venn-action="back"]').disabled = position === 0;
+  root.querySelector('[data-venn-action="reset"]').disabled = position === 0;
+  root.querySelector('[data-venn-action="forward"]').disabled = position === 4;
+  root.querySelector('.step-count').textContent = `Step ${position} of 4`;
+}
+function nextVennPosition(position, action) {
+  return action === 'reset' ? 0 : Math.max(0, Math.min(4, position + (action === 'forward' ? 1 : -1)));
+}
+function operationVennFrame(operation, position, reverse) {
+  const start = reverse ? 'B' : 'A', other = reverse ? 'A' : 'B';
+  const kept = reverse ? 2 : 0;
+  const symbol = operation === 'difference' ? `${start} − ${other}` : lessons[operation][2];
+  const values = results[operation === 'difference' && reverse ? 'reverse' : operation];
+  const steps = operation === 'intersection' ? [
+    ['Initial · find A ∩ B', 'No regions are selected. Compare membership in both sets.', []],
+    ['Step 1 — Inspect A-only', '1 and 2 are not in B, so exclude them.', [0]],
+    ['Step 2 — Inspect B-only', '5 and 6 are not in A, so exclude them.', [2]],
+    ['Step 3 — Select overlap', '3 and 4 belong to both sets, so keep them.', [1]],
+    ['Step 4 — Intersection complete', 'Only the overlap is included: A ∩ B = {3, 4}.', [1]]
+  ] : operation === 'difference' ? [
+    [`Initial · find ${symbol}`, `Start with ${start}, then exclude anything also in ${other}.`, []],
+    [`Step 1 — Start from ${start}`, `${start} is the starting set. Highlight all of its values before filtering.`, [kept, 1]],
+    ['Step 2 — Exclude shared values', `3 and 4 also belong to ${other}, so remove them.`, [1]],
+    [`Step 3 — Keep ${start}-only`, `${values.join(' and ')} belong to ${start} but not ${other}, so keep them.`, [kept]],
+    ['Step 4 — Difference complete', `Only the ${start}-only region remains. ${symbol} = ${fmt(values)}.`, [kept]]
+  ] : [
+    ['Initial · find Aᶜ', 'No region is selected. Find the elements of U that are not in A.', []],
+    ['Step 1 — Identify U', 'U defines all eight possible elements. Nothing outside this boundary can enter the result.', [0, 1]],
+    ['Step 2 — Identify A', '2, 4, 6 and 8 belong to A, so exclude them from the complement.', [1]],
+    ['Step 3 — Select outside A', 'Keep 1, 3, 5 and 7: they are inside U but outside A.', [0]],
+    ['Step 4 — Complement complete', 'Only the region inside U and outside A is included.', [0]]
+  ];
+  return {title:steps[position][0], message:steps[position][1], regions:steps[position][2], symbol, values:position >= 3 ? values : []};
+}
+document.querySelectorAll('[data-venn-operation]').forEach(root => {
+  const operation = root.dataset.vennOperation;
+  let position = 0, reverse = false;
+  function render() {
+    const frame = operationVennFrame(operation, position, reverse);
+    root.querySelectorAll('[data-region]').forEach(region => {
+      const active = frame.regions.includes(Number(region.dataset.region));
+      region.classList.toggle('selected', active && position >= 3);
+      region.classList.toggle('inspecting', active && position > 0 && position < 3);
+    });
+    root.querySelectorAll('[data-values]').forEach(group => group.classList.toggle('current-values', position > 0 && position < 4 && frame.regions.includes(Number(group.dataset.values))));
+    root.querySelector('.universe-outline')?.classList.toggle('universe-active', position === 1);
+    root.querySelector('.union-venn-explanation strong').textContent = frame.title;
+    root.querySelector('.union-venn-explanation p').textContent = frame.message;
+    root.querySelector('desc').textContent = `${frame.title}. ${frame.message}`;
+    root.querySelector('.union-venn-formula').textContent = `${frame.symbol} = ${frame.values.length ? fmt(frame.values) : '∅'}`;
+    root.querySelector('.union-venn-result').classList.toggle('complete', position === 4);
+    root.querySelector('.union-venn-result .card-label').textContent = position === 4 ? `Final ${operation}` : position === 0 ? 'Result so far · no elements included yet' : 'Result so far';
+    root.querySelectorAll('[data-venn-direction]').forEach(button => button.setAttribute('aria-pressed', String((button.dataset.vennDirection === 'reverse') === reverse)));
+    renderVennControls(root, position);
+  }
+  root.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button || button.disabled) return;
+    if (button.dataset.vennDirection) { reverse = button.dataset.vennDirection === 'reverse'; position = 0; }
+    else if (button.dataset.vennAction) position = nextVennPosition(position, button.dataset.vennAction);
+    else return;
+    render();
+  });
+  render();
+});
 
 function renderComplexity(op){
  const trace=complexityTraces[op],step=trace.steps[trace.position],root=document.querySelector(`[data-complexity="${op}"]`),indexed=op!=='union';
