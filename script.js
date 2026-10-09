@@ -57,7 +57,7 @@ function codePanel(operation, reverse = false) {
   return `<pre>${config.name}(${reverse ? 'B, A' : config.args}):\n${code.map((line,i)=>`<span class="line" data-line="${i}">  ${line}</span>`).join('')}</pre>`;
 }
 function stepper(operation) {
-  return `<div class="walkthrough" data-operation="${operation}">${operation === 'difference' ? '<div class="direction" role="group" aria-label="Difference direction"><button data-direction="forward" aria-pressed="true">A − B</button><button data-direction="reverse" aria-pressed="false">B − A</button><span>Switch direction to restart the comparison.</span></div>' : ''}<div class="card-label given-label">Given · ${operation === 'complement' ? 'Aᶜ = U − A' : 'compare the two sets'}</div><div class="operands">${operandRows(operation)}</div><div class="step-layout"><div><div class="decision" aria-live="polite" aria-atomic="true"></div><div class="result-row"><div class="result-heading"><strong>Result Set C</strong><span class="result-change"></span></div><div class="cells output"></div></div><div class="state-key" aria-label="Algorithm state legend"><span class="key-active">Active</span><span class="key-inserted">Inserted</span><span class="key-duplicate">Duplicate</span><span class="key-rejected">Rejected</span><span class="key-processed">Processed</span></div></div><div class="card pseudocode"><div class="card-label">Algorithm</div><div class="code-content">${codePanel(operation)}</div></div></div><div class="step-toolbar"><button data-action="back">← Previous Step</button><button class="primary" data-action="forward">Next Step →</button><button data-action="reset">Reset</button><span class="step-count"></span></div><p class="order-note">Demonstration order only; hash sets do not guarantee sorted iteration. ${operation === 'union' ? '' : 'Membership tests use the other operand’s hash index.'}</p></div>`;
+  return `<div class="walkthrough" data-operation="${operation}">${operation === 'difference' ? '<div class="direction" role="group" aria-label="Difference direction"><button data-direction="forward" aria-pressed="true">A − B</button><button data-direction="reverse" aria-pressed="false">B − A</button><span>Switch direction to restart the comparison.</span></div>' : ''}<div class="card-label given-label">Given · ${operation === 'complement' ? 'Aᶜ = U − A' : 'compare the two sets'}</div><div class="operands">${operandRows(operation)}</div><div class="step-layout"><div><div class="decision" aria-live="polite" aria-atomic="true"></div><div class="result-row"><div class="result-heading"><strong>Result Set C</strong><span class="result-change"></span></div><div class="cells output"></div></div><div class="state-key" aria-label="Algorithm state legend"><span class="key-active">Active</span><span class="key-inserted">Inserted</span><span class="key-duplicate">Duplicate</span><span class="key-rejected">Rejected</span><span class="key-processed">Processed</span></div></div><div class="card pseudocode"><div class="card-label">Algorithm</div><div class="code-content">${codePanel(operation)}</div></div></div><div class="step-toolbar"><button data-action="back">← Previous Step</button><button class="primary" data-action="forward">Next Step →</button><button data-action="reset">Reset</button><span class="step-count"></span></div><p class="order-note">Demonstration order only; hash sets do not guarantee sorted iteration. ${operation === 'union' ? 'Expected time O(n + m); output space O(n + m). Hash insertion is expected O(1), not guaranteed worst-case.' : definitions[operation].assumption}</p></div>`;
 }
 const overview = [['∪','Union'],['∩','Intersection'],['−','Difference'],['Aᶜ','Complement']];
 // EDIT CONTENT / ORDER HERE. Each entry is one slide; numbering and menu are automatic.
@@ -72,19 +72,63 @@ function concept(operation) {
 const [title,definition,symbol,read,why]=lessons[operation];
 return {title,section:'MEANING & EXAMPLE',html:`<div class="definition"><span class="card-label">Definition</span><p>${definition}</p></div><div class="notation"><strong>${symbol}</strong><span>Read as “${read}.”</span></div><div class="operands concept-operands">${operandRows(operation)}</div><div class="answer"><div class="formula">${symbol} = ${fmt(results[operation])}</div>${operation==='difference'?`<div class="reverse-result">B − A = ${fmt(results.reverse)}</div>`:''}<p>${why}</p></div>`};
 }
+// Union's three disjoint regions share the same inputs as the algorithm trace.
+const unionRegions = [
+  {name:'A only', values:EXAMPLES.A.filter(x=>!EXAMPLES.B.includes(x)), x:165},
+  {name:'Overlap', values:EXAMPLES.A.filter(x=>EXAMPLES.B.includes(x)), x:280},
+  {name:'B only', values:EXAMPLES.B.filter(x=>!EXAMPLES.A.includes(x)), x:395}
+];
+const unionVennSteps = [
+  ['Initial · find A ∪ B', 'Find A ∪ B by including the distinct elements from all three regions.'],
+  ['Step 1 — Set A', 'Begin with elements found only in Set A.'],
+  ['Step 2 — Common elements', 'Include the shared elements. Each value is counted once.'],
+  ['Step 3 — Remaining elements of B', 'Add the elements found only in Set B.'],
+  ['Step 4 — Union complete', 'The union includes all three regions, with no repeated elements.']
+];
+function unionVennSlide() {
+  return {title:'Union Venn Diagram', html:`<p class="lead union-venn-description">A Venn diagram helps visualize how the union operation combines elements from two sets. Every element belonging to Set A, Set B, or both is included in the union.</p>
+  <div class="union-venn-walkthrough" aria-label="Union Venn walkthrough">
+    <div class="union-venn-layout">
+      <div class="union-venn-visual">
+        <div class="union-venn-given"><span>A = ${fmt(EXAMPLES.A)}</span><span>B = ${fmt(EXAMPLES.B)}</span></div>
+        <svg class="union-venn-svg" viewBox="80 0 400 300" role="img" aria-labelledby="union-venn-title union-venn-description">
+          <title id="union-venn-title">Three regions of A union B</title>
+          <desc id="union-venn-description">A only contains ${unionRegions[0].values.join(', ')}; the overlap contains ${unionRegions[1].values.join(', ')}; B only contains ${unionRegions[2].values.join(', ')}. Initially no regions are selected.</desc>
+          <defs>
+            <mask id="union-only-a"><rect width="560" height="310" fill="white"/><circle cx="345" cy="160" r="115" fill="black"/></mask>
+            <mask id="union-only-b"><rect width="560" height="310" fill="white"/><circle cx="215" cy="160" r="115" fill="black"/></mask>
+            <clipPath id="union-overlap"><circle cx="345" cy="160" r="115"/></clipPath>
+          </defs>
+          <circle class="union-region region-a" data-region="0" cx="215" cy="160" r="115" mask="url(#union-only-a)"/>
+          <circle class="union-region region-shared" data-region="1" cx="215" cy="160" r="115" clip-path="url(#union-overlap)"/>
+          <circle class="union-region region-b" data-region="2" cx="345" cy="160" r="115" mask="url(#union-only-b)"/>
+          <circle class="union-outline outline-a" cx="215" cy="160" r="115"/><circle class="union-outline outline-b" cx="345" cy="160" r="115"/>
+          <text class="union-set-label label-a" x="165" y="32" text-anchor="middle">A</text><text class="union-set-label label-b" x="395" y="32" text-anchor="middle">B</text>
+          ${unionRegions.map((region,i)=>`<g class="union-region-values" data-values="${i}"><text x="${region.x}" y="155" text-anchor="middle">${region.values.join(', ')}</text><text class="union-region-name" x="${region.x}" y="184" text-anchor="middle">${region.name}</text></g>`).join('')}
+        </svg>
+      </div>
+      <div class="union-venn-details">
+        <div class="union-venn-why"><h3>Why use a Venn diagram?</h3><p>It shows which regions contribute to the result. For union, both circles, including the overlapping region, belong to the output.</p></div>
+        <div class="union-venn-explanation" aria-live="polite" aria-atomic="true"><strong></strong><p></p></div>
+        <div class="union-venn-result"><div class="card-label">Result so far</div><div class="union-venn-formula"></div></div>
+      </div>
+    </div>
+    <div class="step-toolbar"><button data-venn-action="back" disabled>← Previous Step</button><button data-venn-action="forward" class="primary">Next Step →</button><button data-venn-action="reset" disabled>Reset</button><span class="step-count"></span></div>
+  </div><p class="union-venn-note">Elements ${unionRegions[1].values.join(' and ')} belong to both sets, but appear only once in the result because sets contain unique elements.</p>`};
+}
 function diagramSlide(operation) {
+if (operation === 'union') return unionVennSlide();
 const text={union:'Shade both circles, including the overlap. Shared values belong to the result once.',intersection:'Shade only the overlap: 3 and 4 belong to both A and B.',difference:'The shaded region changes when the operands change order.',complement:'Shade the part of U outside A. The universe determines what “outside” means.'};
 return {title:`${definitions[operation].name} Venn Diagram`,section:'SEE THE RESULT',html:operation==='difference'?`<p class="lead">${text[operation]}</p><div class="comparison"><div class="card">${venn(operation)}<div class="formula">A − B = ${fmt(results.difference)}</div></div><div class="card">${venn(operation,true)}<div class="formula">B − A = ${fmt(results.reverse)}</div></div></div>`:`<p class="lead">${text[operation]}</p><div class="venn-lesson"><div>${venn(operation)}</div><div>${card('Given',operation==='complement'?`<p>U = ${fmt(EXAMPLES.U)}</p><p>A = ${fmt(EXAMPLES.complementA)}</p>`:given())}<div class="formula">${lessons[operation][2]}<br>= ${fmt(results[operation])}</div></div></div>`};
 }
 const motivation={title:'Why Sets Matter in Computing',section:'WHY SET SEMANTICS MATTER',html:`<p class="lead">Arrays can contain repeated values. Concatenation appends every entry; set union keeps unique values.</p><div class="motivation-given">Array A = [${EXAMPLES.A.join(', ')}] <span>Array B = [${EXAMPLES.B.join(', ')}]</span></div><div class="comparison"><div class="card"><div class="card-label">Append · preserve every entry</div><h3>Array concatenation</h3><div id="concat-cells" class="cells"></div><p id="concat-caption"></p></div><div class="card"><div class="card-label">After · enforce uniqueness</div><h3>Set union</h3><div id="unique-cells" class="cells"></div><p id="unique-caption"></p></div></div><div class="callout" id="motivation-caption" aria-live="polite"></div><div class="step-toolbar"><button id="motivation-next" class="primary">Next Step →</button><button id="motivation-reset">Reset</button><span id="motivation-count"></span></div>`};
-const adt={title:'Sets as an Abstract Data Type',section:'FROM MEANING TO IMPLEMENTATION',html:`<p class="lead">A set is a collection of <strong>unique elements</strong>. Mathematical sets have no inherent order.</p><div class="adt-operations">insert(x) · contains(x) · remove(x) · iteration</div><div class="cards adt-cards">${[['Unsorted array / list','O(n)','Scan entries to test membership. Check for duplicates when inserting.'],['Hash set','Expected O(1)','Use hashing for fast membership and insertion. Collisions can make operations slower.'],['Balanced search tree','O(log n)','Search a balanced tree for membership. Can iterate in key order.']].map(([name,cost,copy])=>`<div class="card"><h3>${name}</h3><div class="formula">${cost}</div><p>${copy}</p></div>`).join('')}</div><p class="note">These are membership costs. Implementations may differ in iteration order; hash sets do not guarantee sorted order.</p>`};
 const performance={title:'Complexity Comparison',section:'THE COST OF THE IMPLEMENTATION',html:`<p class="lead">Ordinary inputs: build any needed hash index, then scan.<br>n = |A|, m = |B|, u = |U|. Hash operations take <strong>expected O(1)</strong>.</p><div class="card table-card"><table><thead><tr><th>Operation</th><th>Expected total time</th><th>Additional space, including output</th></tr></thead><tbody><tr><td>Union</td><td>O(n + m)</td><td>O(n + m)</td></tr><tr><td>Intersection</td><td>O(n + m)</td><td>O(m + min(n, m)) · index B + output</td></tr><tr><td>Difference A − B</td><td>O(n + m)</td><td>O(m + n) · index B + output</td></tr><tr><td>Complement U − A</td><td>O(u + n)</td><td>O(n + u) · index A + output</td></tr></tbody></table></div><div class="callout">If both operands are already hash sets, intersection can scan the smaller set in expected <strong>O(min(n, m))</strong> time, excluding construction.</div><p class="note">Space bounds are upper bounds for these implementations. Expected hash performance is not a worst-case guarantee.</p>`};
 const summary={title:'Four questions. Four operations.',section:'SUMMARY',html:`<p class="lead">Choose the operation by what you want to keep.</p><div class="cards summary">${[['∪','Union','In A or B',results.union],['∩','Intersection','In A and B',results.intersection],['−','Difference','In A, not B',results.difference],['ᶜ','Complement','In U, not A',results.complement]].map(([symbol,name,meaning,result])=>`<div class="card"><div class="symbol">${symbol}</div><h3>${name}</h3><p>${meaning}</p><p class="summary-result">${fmt(result)}</p></div>`).join('')}</div><p class="closing">The operation determines the result.<br>The data structure determines the cost.</p>`};
 
 const slides = [
  {title:'Set Operations',section:'01 / Collections, compared',html:`<div class="title-layout"><div><h1>SET<br>OPERATIONS</h1><div class="title-rule"></div><p class="lead">Advanced Data Structure<br>and Algorithm Analysis</p><p class="presenter">Presented by: <strong>Jay-ar Mesquiola</strong></p><p class="title-topics">Union · Intersection · Difference · Complement</p><p class="note">Use the arrow keys to explore →</p></div><div class="title-art"><div class="art-card"><div class="art-label">TWO COLLECTIONS</div><div class="cells">${cells(EXAMPLES.A)}</div><div class="art-label">∪</div><div class="cells">${cells(EXAMPLES.B)}</div><div class="art-arrow">↓</div><div class="art-label">ONE SET OF UNIQUE ELEMENTS</div><div class="cells">${cells(unique([...EXAMPLES.A,...EXAMPLES.B]))}</div></div><p class="art-note">Different questions. The right collection.</p></div></div>`},
  {title:'Set operations in computing',html:`<p class="lead overview-definition">Set operations are fundamental computational procedures used to combine, compare, and filter collections of unique elements. In computer science, they help organize data, eliminate duplicates, identify shared values, and isolate specific subsets efficiently.</p><div class="cards overview-cards">${overview.map(([symbol,name])=>`<div class="card"><div class="symbol">${symbol}</div><h3>${name}</h3></div>`).join('')}</div><p class="overview-emphasis">A set stores unique elements only — duplicates are ignored.</p>`},
- motivation, adt,
+ motivation,
  concept('union'), {title:'Union Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('union')}, diagramSlide('union'),
  concept('intersection'), {title:'Intersection Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('intersection')}, diagramSlide('intersection'),
  concept('difference'), {title:'Difference Algorithm Walkthrough',section:'STEP BY STEP',html:stepper('difference')}, diagramSlide('difference'),
@@ -93,8 +137,10 @@ const slides = [
  {title:'Where these algorithms show up',section:'APPLICATIONS',html:`<p class="lead">Small membership decisions power larger systems.</p><div class="cards">${[['∪','Combine users','Merge two user-ID collections into one deduplicated audience.'],['∩','Shared neighbors','Find vertices adjacent to both graph nodes, or tags shared by two records.'],['−','Filter blocked IDs','Start with candidate IDs and remove every ID in the blocked set.'],['ᶜ','Find what’s missing','From the eligible universe, select records that have not yet been selected.']].map(([s,n,d])=>`<div class="card"><div class="symbol">${s}</div><h3>${n}</h3><p>${d}</p></div>`).join('')}</div><div class="callout"><strong>Union-Find / DSU is a different ADT.</strong> It stores partitions and supports find / union for connectivity, cycle detection, and Kruskal’s algorithm. It does not directly produce A ∪ B as a deduplicated collection.</div>`},
  summary
 ];
+// Keep original numeric bookmarks; retired ADT bookmark redirects to motivation.
+slides.forEach((slide, i) => { slide.bookmark = i < 3 ? i + 1 : i + 2; });
 const deck = document.getElementById('deck');
-deck.innerHTML = slides.map((slide,i)=>`<section class="slide" id="slide-${i+1}" aria-labelledby="title-${i+1}" ${i?'hidden':''}>${i?`<h2 id="title-${i+1}">${slide.title}</h2>`:''}${slide.html}</section>`).join('');
+deck.innerHTML = slides.map((slide,i)=>`<section class="slide ${i===0?'cover-slide':i===1?'overview-slide':slide.title==='Union Venn Diagram'?'union-venn-slide':slide.html.includes('class="walkthrough"')?'walkthrough-slide':'concept-slide'}" id="slide-${slide.bookmark}" aria-labelledby="title-${i+1}" ${i?'hidden':''}>${i?`<h2 id="title-${i+1}">${slide.title}</h2>`:''}${slide.html}</section>`).join('');
 deck.querySelector('h1').id = 'title-1';
 function renderTrace(operation) {
   const trace = traces[operation], step = trace.steps[trace.position];
@@ -158,7 +204,7 @@ function navigate(position, updateHash = true) {
   document.getElementById('previous').disabled = current===0;
   document.getElementById('next').disabled = current===slides.length-1;
   links.querySelectorAll('button').forEach((button,i)=>{if(i===current)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
-  if(updateHash) { try {history.replaceState(null,'',`#slide-${current+1}`);} catch { /* Navigation still works in restricted file viewers. */ } }
+  if(updateHash) { try {history.replaceState(null,'',`#slide-${slides[current].bookmark}`);} catch { /* Navigation still works in restricted file viewers. */ } }
   document.title = `${current+1}. ${slides[current].title} — Set Operations`;
 }
 document.getElementById('previous').addEventListener('click',()=>navigate(current-1));
@@ -168,7 +214,7 @@ document.getElementById('close-index').addEventListener('click',()=>dialog.close
 links.addEventListener('click',event=>{const button=event.target.closest('[data-slide]');if(button){navigate(Number(button.dataset.slide));dialog.close();}});
 dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();}});
 document.addEventListener('keydown',event=>{
-  if(dialog.open || event.altKey || event.ctrlKey || event.metaKey || (event.target.isContentEditable || event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])')))return;
+  if(document.getElementById('stage').inert || dialog.open || event.altKey || event.ctrlKey || event.metaKey || (event.target.isContentEditable || event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])')))return;
   // Space activates a focused control; arrow/Page keys still navigate after clicks.
   if(event.key === ' ' && event.target.closest('button,a'))return;
   if(['ArrowRight','PageDown',' '].includes(event.key)){event.preventDefault();navigate(current+1);}
@@ -177,13 +223,101 @@ document.addEventListener('keydown',event=>{
   if(['ArrowLeft','PageUp'].includes(event.key)){event.preventDefault();navigate(current-1);}
 });
 const full = document.getElementById('fullscreen');
-if(!document.documentElement.requestFullscreen){full.hidden=true;}else{
-  full.addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{full.title='Fullscreen is unavailable in this viewer. Open index.html in a browser to present.';}});
-  document.addEventListener('fullscreenchange',()=>{const active=!!document.fullscreenElement;full.innerHTML=active?'⛶ <span>Exit</span>':'⛶ <span>Present</span>';full.setAttribute('aria-label',active?'Exit fullscreen':'Enter fullscreen');});
+const stage = document.getElementById('stage');
+const canvas = document.querySelector('.slide-canvas');
+const prompt = document.getElementById('mobile-prompt');
+const start = document.getElementById('start-presentation');
+const status = document.getElementById('presentation-status');
+let started = false, orientationLocked = false, presenting = false;
+const isPhone = () => matchMedia('(pointer: coarse)').matches && Math.min(innerWidth, innerHeight) < 600;
+const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+function fitCanvas() {
+  const viewport = window.visualViewport;
+  stage.style.width = `${viewport ? viewport.width : innerWidth}px`;
+  stage.style.height = `${viewport ? viewport.height : innerHeight}px`;
+  stage.style.left = `${viewport ? viewport.offsetLeft : 0}px`;
+  stage.style.top = `${viewport ? viewport.offsetTop : 0}px`;
+  const style = getComputedStyle(stage);
+  const width = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const height = stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  canvas.style.transform = `translate(-50%, -50%) scale(${Math.min(width / 1600, height / 900)})`;
+  canvas.style.left = `${parseFloat(style.paddingLeft) + width / 2}px`;
+  canvas.style.top = `${parseFloat(style.paddingTop) + height / 2}px`;
+  const portrait = height > width;
+  prompt.hidden = !isPhone() || (started && !portrait);
+  stage.inert = !prompt.hidden;
+  document.getElementById('mobile-title').textContent = portrait ? 'Rotate your device to landscape' : 'Start Presentation';
+  document.getElementById('mobile-message').textContent = portrait ? 'Turn your phone sideways. If it stays upright, turn off rotation lock in your device settings.' : 'Open the full slide canvas for the best presentation view.';
+  document.getElementById('continue-presentation').hidden = portrait;
 }
-function readHash(){const match=location.hash.match(/^#slide-(\d+)$/);navigate(match?Number(match[1])-1:0,false);}
-window.addEventListener('hashchange',readHash);
+async function enterPresentation() {
+  if (presenting) return;
+  presenting = true; started = true;
+  const messages = [];
+  try {
+    const request = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+    if (!fullscreenElement() && request) {
+      try { await request.call(document.documentElement); }
+      catch { messages.push('Fullscreen was denied. You can continue in your browser.'); }
+    } else if (!request) messages.push('Fullscreen is unavailable in this browser.');
+    if (isPhone()) {
+      if (screen.orientation && typeof screen.orientation.lock === 'function') {
+        try { await screen.orientation.lock('landscape'); orientationLocked = true; }
+        catch { messages.push('Landscape lock is unavailable. Rotate your device manually.'); }
+      } else messages.push('Rotate your device manually; landscape lock is unsupported.');
+    }
+    status.textContent = messages.join(' ');
+    full.title = status.textContent || 'Presentation mode';
+    start.textContent = 'Retry Fullscreen / Landscape';
+  } finally { presenting = false; fitCanvas(); }
+}
+full.addEventListener('click', async () => {
+  if (fullscreenElement()) {
+    try { await (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+    catch { full.title = 'Use your browser’s fullscreen exit control.'; }
+  } else await enterPresentation();
+});
+start.addEventListener('click', enterPresentation);
+document.getElementById('continue-presentation').addEventListener('click', () => { started = true; fitCanvas(); });
+function fullscreenChanged() {
+  const active = !!fullscreenElement();
+  if (!active && orientationLocked) {
+    try { screen.orientation.unlock(); } catch { /* Some browsers unlock automatically. */ }
+    orientationLocked = false;
+  }
+  full.innerHTML = active ? '⛶ <span>Exit</span>' : '⛶ <span>Present</span>';
+  full.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+  fitCanvas();
+}
+document.addEventListener('fullscreenchange', fullscreenChanged);
+document.addEventListener('webkitfullscreenchange', fullscreenChanged);
+window.addEventListener('resize', fitCanvas);
+window.addEventListener('orientationchange', fitCanvas);
+window.visualViewport?.addEventListener('resize', fitCanvas);
+window.visualViewport?.addEventListener('scroll', fitCanvas);
+screen.orientation?.addEventListener('change', fitCanvas);
+// Swipe only blank slide surfaces; widgets retain their own gestures.
+let swipe = null;
+const interactive = target => target.closest('button,a,input,select,textarea,.walkthrough,.union-venn-walkthrough,.comparison,.step-toolbar,dialog');
+deck.addEventListener('pointerdown', event => {
+  swipe = event.pointerType === 'touch' && !interactive(event.target) ? {x:event.clientX,y:event.clientY,id:event.pointerId} : null;
+});
+deck.addEventListener('pointerup', event => {
+  if (!swipe || swipe.id !== event.pointerId) return;
+  const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y;
+  swipe = null;
+  if (!interactive(event.target) && Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) navigate(current + (dx < 0 ? 1 : -1));
+});
+deck.addEventListener('pointercancel', () => { swipe = null; });
+function readHash() {
+  const match = location.hash.match(/^#slide-(\d+)$/);
+  const bookmark = match ? Number(match[1]) : 1;
+  const index = bookmark === 4 ? 2 : slides.findIndex(slide => slide.bookmark === bookmark);
+  navigate(index < 0 ? 0 : index);
+}
+window.addEventListener('hashchange', readHash);
 readHash();
+fitCanvas();
 // Concatenation and union share inputs, but apply different membership rules.
 let motivationPosition = 0;
 function renderMotivation() {
@@ -191,7 +325,7 @@ function renderMotivation() {
   document.getElementById('concat-cells').innerHTML = motivationPosition ? joined.map((x,i)=>`<span class="cell ${joined.indexOf(x)!==i?'duplicate':''}">${x}</span>`).join('') : '<span class="empty">Ready to append A and B</span>';
   document.getElementById('unique-cells').innerHTML = motivationPosition===2 ? cells(unique(joined)) : '<span class="empty">Waiting to apply set semantics</span>';
   document.getElementById('concat-caption').textContent = motivationPosition ? '8 entries: the second 3 and 4 are repeated.' : 'Append every entry, without checking duplicates.';
-  document.getElementById('unique-caption').textContent = motivationPosition===2 ? '6 unique values: repeated insertions change nothing.' : 'Insert values into a Set / HashSet.';
+  document.getElementById('unique-caption').textContent = motivationPosition===2 ? '6 unique values: repeated insertions change nothing.' : 'A HashSet stores unique values using hashing; insertion and lookup take expected O(1).';
   document.getElementById('motivation-caption').textContent = ['Initially: compare two ways to combine the same inputs.','Concatenation alone does not remove duplicates.','Union always contains unique values. Arrays can also be deduplicated with explicit checks; a hash set is one efficient implementation.'][motivationPosition];
   document.getElementById('motivation-count').textContent = `Step ${motivationPosition} of 2`;
   document.getElementById('motivation-next').disabled = motivationPosition===2;
@@ -200,3 +334,40 @@ function renderMotivation() {
 document.getElementById('motivation-next').addEventListener('click',()=>{motivationPosition=Math.min(2,motivationPosition+1);renderMotivation();});
 document.getElementById('motivation-reset').addEventListener('click',()=>{motivationPosition=0;renderMotivation();});
 renderMotivation();
+
+// This state is independent of algorithm traces and survives slide navigation.
+let unionVennPosition = 0;
+const unionVennRoot = document.querySelector('.union-venn-walkthrough');
+function renderUnionVenn(animate = false) {
+  const selected = Math.min(unionVennPosition, 3);
+  unionVennRoot.querySelectorAll('[data-region]').forEach((region, i) => {
+    region.classList.toggle('selected', i < selected);
+    region.classList.toggle('new-region', animate && unionVennPosition === i + 1);
+  });
+  unionVennRoot.querySelectorAll('[data-values]').forEach((group, i) => {
+    group.classList.toggle('current-values', unionVennPosition === i + 1);
+  });
+  const [title, message] = unionVennSteps[unionVennPosition];
+  unionVennRoot.querySelector('.union-venn-explanation strong').textContent = title;
+  unionVennRoot.querySelector('.union-venn-explanation p').textContent = message;
+  const values = unionRegions.slice(0, selected).flatMap(region => region.values);
+  const added = animate && unionVennPosition > 0 && unionVennPosition < 4 ? unionRegions[unionVennPosition - 1].values : [];
+  unionVennRoot.querySelector('.union-venn-formula').innerHTML = values.length
+    ? `${unionVennPosition === 4 ? 'A ∪ B' : 'C'} = {${values.map(x=>`<span class="${added.includes(x)?'union-new-value':''}">${x}</span>`).join(', ')}}`
+    : 'C = ∅';
+  unionVennRoot.querySelector('.union-venn-result').classList.toggle('complete', unionVennPosition === 4);
+  unionVennRoot.querySelector('.union-venn-result .card-label').textContent = unionVennPosition === 4 ? `Final union · ${values.length} unique elements` : unionVennPosition === 0 ? 'Result so far · no elements included yet' : 'Result so far';
+  unionVennRoot.querySelector('#union-venn-description').textContent = unionRegions.map((region,i)=>`${region.name}: ${region.values.join(', ')}; ${i<selected?'included':'not yet included'}.`).join(' ');
+  unionVennRoot.querySelector('[data-venn-action="back"]').disabled = unionVennPosition === 0;
+  unionVennRoot.querySelector('[data-venn-action="reset"]').disabled = unionVennPosition === 0;
+  unionVennRoot.querySelector('[data-venn-action="forward"]').disabled = unionVennPosition === 4;
+  unionVennRoot.querySelector('.step-count').textContent = `Step ${unionVennPosition} of 4`;
+}
+unionVennRoot.addEventListener('click', event => {
+  const button = event.target.closest('[data-venn-action]');
+  if (!button || button.disabled) return;
+  const previous = unionVennPosition;
+  unionVennPosition = button.dataset.vennAction === 'reset' ? 0 : Math.max(0, Math.min(4, previous + (button.dataset.vennAction === 'forward' ? 1 : -1)));
+  renderUnionVenn(unionVennPosition > previous);
+});
+renderUnionVenn();

@@ -2,15 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#813105">
   <title>Set Operations — An Interactive Lecture</title>
   <link rel="stylesheet" href="styles.css">
   <script src="script.js" defer></script>
 </head>
 <body>
+  <div id="stage"><div class="slide-canvas">
   <header class="topbar"><span class="course">ADVANCED DATA STRUCTURE & ALGORITHM ANALYSIS</span><div class="tools"><nav class="navigation" aria-label="Slide navigation"><span id="counter" aria-live="polite"></span><button id="previous" aria-label="Previous slide" title="Previous slide (Left Arrow)">←</button><button id="next" aria-label="Next slide" title="Next slide (Right Arrow)">→</button></nav><button id="contents" aria-haspopup="dialog">Contents <span>☷</span></button><button id="fullscreen" aria-label="Enter fullscreen">⛶ <span>Present</span></button></div></header>
   <main id="deck" aria-label="Set operations presentation"></main>
+  </div></div>
+  <aside id="mobile-prompt" hidden aria-labelledby="mobile-title"><div class="rotate-icon" aria-hidden="true">↻ ▯</div><h2 id="mobile-title">Start Presentation</h2><p id="mobile-message"></p><button id="start-presentation" class="primary">Start Presentation</button><button id="continue-presentation">Continue in browser</button><p id="presentation-status" role="status"></p></aside>
   <noscript><p class="no-script">Enable JavaScript to open this interactive lecture. Sets contain unique elements: union combines, intersection finds shared elements, difference excludes, and complement selects from a finite universe.</p></noscript>
   <dialog id="index-dialog" aria-labelledby="index-title"><div class="dialog-heading"><div><h2 id="index-title">Contents</h2></div><button id="close-index" aria-label="Close contents">✕</button></div><nav id="index-links" aria-label="Jump to slide"></nav><p class="menu-tip">← → to navigate · Home / End · Space to advance · Esc to close</p></dialog>
 </body>
